@@ -1,0 +1,174 @@
+---
+title: "100-generate-loci"
+author: "Mac Campbell"
+date: "June 23, 2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
+```
+
+```{r}
+library(tidyverse)
+library(ggtree)
+library(phytools)
+library(ggrepel)
+```
+
+## EPV Loci
+We need to start with a list of loci using the Parvoviridae-GLUE repository.
+
+```{r}
+amdo<-read_tsv("~/github/Parvoviridae-GLUE/tabular/eve/parvovirinae/epv-amdo-side-data.tsv") %>% 
+    mutate(virus_genus="Amdoparvovirus")
+  
+dependo<-read_tsv("~/github/Parvoviridae-GLUE/tabular/eve/parvovirinae//epv-dependo-side-data.tsv")
+  
+erythro<-read_tsv("~/github/Parvoviridae-GLUE/tabular/eve/parvovirinae/epv-erythro-side-data.tsv") %>% 
+    mutate(virus_genus="Erythroparvovirus")
+  
+proto<-read_tsv("~/github/Parvoviridae-GLUE/tabular/eve/parvovirinae/epv-proto-side-data.tsv")  %>% 
+    mutate(virus_genus="Protoparvovirus") %>% 
+    mutate(organism=host_species) %>% select(-host_species)
+  
+ichthama<-read_tsv("~/github/Parvoviridae-GLUE/tabular/eve/hamaparvovirinae/epv-ichthama-side-data.tsv") %>%
+    mutate(virus_genus="Ichthamaparvovirus") %>%
+   mutate(organism=host_species) %>% select(-host_species)
+  
+unc<-read_tsv("~/github/Parvoviridae-GLUE/tabular/eve/parvovirinae/epv-unc-parvo-side-data.tsv")%>%
+    mutate(virus_genus="Unclassified") %>%
+  mutate(organism=host_species) %>% select(-host_species)
+
+#Need to have scyliorhinus in the tree, and tetraodon for unclassified parvoviruses
+```
+
+```{r}
+data<-bind_rows(amdo,dependo,erythro,proto,ichthama,unc)
+data$Species<-gsub("_"," ",data$organism)
+data<-data %>% select(host_class, sequenceID, Species, organism, locus_name, virus_genus)
+species<-data %>% select(Species) %>% unique()
+write_tsv(species, "outputs/100/species-list-100.tsv", col_names = FALSE)
+species2<-c(species$Species, "Homo sapiens") %>% as_tibble()
+write_tsv(species2, "outputs/100/species-list-with-human-100.tsv", col_names = FALSE)
+```
+
+With time tree:
+20 unresolved
+Lonchura striata domestica (replaced with Lonchura striata)
+Pelusios castaneus (replaced with Pelusios williamsi)
+Panthera tigris altaica (replaced with Panthera tigris)
+Prionailurus bengalensis euptilurus (replaced with Prionailurus bengalensis)
+Canis lupus dingo (replaced with Canis lupus)
+Canis familiaris (replaced with Canis lupus)
+Equus asinus somalicus (replaced with Equus asinus)
+Equus africanus asinus (replaced with Equus asinus)
+Equus burchellii boehmi (replaced with Equus burchellii)
+Equus zebra hartmannae (replaced with Equus zebra)
+Ceratotherium simum cottoni (replaced with Ceratotherium simum)
+Dicerorhinus sumatrensis sumatrensis (replaced with Dicerorhinus sumatrensis)
+Cervus elaphus hippelaphus (replaced with Cervus elaphus)
+Murina aurata feae (replaced with Murina aurata)
+Mus castaneus (replaced with Mus musculus)
+Peromyscus polionotus subgriseus (replaced with Peromyscus polionotus)
+Peromyscus maniculatus bairdii (replaced with Peromyscus maniculatus)
+Colobus angolensis palliatus (replaced with Colobus angolensis)
+Emydocephalus ijimae (no substitute found)
+Neophocaena asiaeorientalis (no substitute found)
+
+We need to replace the names in our data frame or tip labels to resolve this problem. t$data will have "Ptyas_mucosa"
+### Tree
+```{r}
+tree<-read.tree("outputs/100/species-list-100.nwk")
+
+vec<-c("Lonchura_striata","Pelusios_williamsi","Dicerorhinus_sumatrensis","Murina_aurata",
+       "Peromyscus_polionotus","Peromyscus_maniculatus","Colobus_angolensis", "Equus_zebra",
+       "Cervus_elpahus", "Ceratotherium_simum","Dicerorhinus_sumatrensis", "Carlito_syrichta")
+       
+vec2<-c("Lonchura_striata_domestica","Pelusios_castaneus","Dicerorhinus_sumatrensis_sumatrensis","Murina_aurata_feae",
+        "Peromyscus_polionotus_subgriseus","Peromyscus_maniculatus_bairdii","Colobus_angolensis_palliatus", "Equus_zebra_hartmannae",
+        "Cervus_elaphus_hippelaphus","Ceratotherium_simum_cottoni", "Dicerorhinus_sumatrensis_sumatrensis","Tarsius_syrichta")
+
+#This doesn't work how I think it would
+#tree$tip.label<-replace(tree$tip.label, tree$tip.label %in% vec, vec2)
+#As loop? 1:length(vec)
+for (i in 1:length(vec)) {
+
+tree$tip.label<-replace(tree$tip.label, tree$tip.label==vec[i], vec2[i])
+  
+}
+
+t<-ggtree(tree)
+
+#Making tip ages = 0 
+t$data<-t$data %>% mutate(Age=max(x)-x)
+
+t + geom_tiplab(size=2) +
+  geom_treescale()+
+  xlim(0,500)+
+  geom_nodelab(aes(label=round(Age,2)), hjust=0, size=2)
+
+ggsave("outputs/100/tree.pdf", width=8, height=24)
+```
+
+### Minimum Ages
+```{r}
+#Making "Taxa" for tip labs and calculate number of taxa
+#Exlude unassigned "NK" locus_names
+#filter to tips in tree
+treetips<-t$data %>% filter(isTip==TRUE) %>% select(label)
+
+df<-data %>% filter(locus_name != "NK") %>% unique() %>%
+  mutate(Delim=gsub(" ","_",Species)) %>%
+  filter(Delim %in% treetips$label) %>%
+  group_by(locus_name) %>% mutate(Taxa=paste(Delim, collapse=" "))  %>% mutate(Count=n())
+
+#getting min age of nodes
+df2<-df %>% mutate(node = as.numeric(ifelse(Count > 1, findMRCA(tree, tips=strsplit(Taxa, " ")[[1]]), t$data[t$data$label==Taxa,]$node)))
+df3<-left_join(df2, t$data, by="node")
+df3<-df3 %>% mutate(Age=ifelse(Age < 1, 0, Age))
+df3$Age<-replace_na(df3$Age, 0)
+
+#Summarize min age of nodes
+df3 %>% select(locus_name, Age) %>% unique()
+```
+Including tmrca to humans
+
+```{r}
+tree2<-read.tree("outputs/100/species-list-with-human-100.nwk")
+
+for (i in 1:length(vec)) {
+
+tree2$tip.label<-replace(tree2$tip.label, tree2$tip.label==vec[i], vec2[i])
+  
+}
+
+t2<-ggtree(tree2)
+t2$data<-t2$data %>% mutate(Age=max(x)-x)
+
+dfh<-df %>% mutate(Taxa=paste0(Taxa, " Homo_sapiens")) %>%
+  mutate(node = as.numeric(ifelse(Count >= 1, findMRCA(tree2, tips=strsplit(Taxa, " ")[[1]]), NA)))
+
+dfh2<-left_join(dfh, t2$data, by="node") %>% rename(DivTime=Age)
+dfh2$Taxa<-gsub(" Homo_sapiens","", dfh2$Taxa)
+```
+
+
+Combine (trees are different, so......)     
+```{r}
+df4<-df3 %>% left_join(dfh2 %>% select(sequenceID, Species, organism, locus_name, virus_genus, Taxa, DivTime))
+
+df5<-df4 %>% select(locus_name, virus_genus, Age, DivTime) %>% unique() %>% rename(`Minimum Age` = Age, `Divergence Time From Humans`=DivTime)
+df5
+
+write_csv(df5, "outputs/100/all-loci-ages.csv")
+```
+
+Now to merge with other data:
+
+```{r}
+table<-read_csv("meta/eve-meta-hg38-05032021.csv") %>% left_join(df5, by=c("EVE"="locus_name")) %>% select(-Orientation)
+
+write_csv(table, "meta/full-table.csv")
+```
+

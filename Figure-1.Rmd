@@ -1,0 +1,122 @@
+---
+title: "Figure-1"
+author: "Mac Campbell"
+date: "6/30/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
+```
+
+```{r}
+library(tidyverse)
+library(circlize)
+library(scales)
+```
+
+## Circular Plot
+
+Getting data including divergence time from humans.    
+
+Note on 06302021 - those loci that are evaluated as GSHs perhaps could be labeled and shaped differently on the inside track.
+
+```{r}
+data<-read_csv("meta/full-table.csv") %>% 
+  filter(HumanCoords !="NA") %>%
+  separate(HumanCoords, into = c("Chrom","Start","Stop")) 
+data$Start<-as.numeric(data$Start)
+data$Stop <-as.numeric(data$Stop)
+
+data<-data %>%  mutate(Confidence=abs(Stop-Start))
+
+length(na.omit(data$MinAge))
+```
+
+```{r}
+intronic<-data %>% filter(Type=="Intronic") %>% mutate(Y=.95)
+bed1<-intronic %>% select(Chromosome,Start,Stop,Protein1) %>% rename(Label=Protein1) %>%
+  mutate(Color="darkgreen") %>% mutate(Y=.95)
+
+intronicAge <- filter(intronic, MinAge !="NA")
+
+intergenic<-data %>% filter(Type=="Intergenic")  %>% mutate(Y=.95)
+bed2<-intergenic %>% select(Chromosome, Start, Stop, Protein1, Protein2) %>%
+  mutate(Label=paste0(Protein1, "\n", Protein2)) %>% select(-Protein1, -Protein2) %>%
+  mutate(Color="darkblue") %>% mutate(Y=.95)
+
+intergenicAge <- filter(intergenic, MinAge !="NA")
+beds<-bind_rows(bed1,bed2) %>% rename(End=Stop)
+```
+
+### Make figure
+```{r}
+circos.clear()
+
+pdf("outputs/figures/figure-1.pdf", width=6, height=6)
+
+circos.par(start.degree = 90, track.margin=c(0.01, 0.01), gap.degree = c(1,1,1,1,1,1,1,1,1,1,
+                                                                         1,1,1,1,1,1,1,1,1,1,
+                                                                         1,1,9) )
+
+#Initialize and remove Y chrom
+circos.initializeWithIdeogram(plotType = c("labels", "axis"), species = "hg38",
+                              chromosome.index = paste0("chr", c("1","2","3","4","5","6","7","8","9","10","11",
+                                                                 "12","13","14","15","16","17","18","19","20",
+                                                                 "21","22","X")),
+                              tickLabelsStartFromZero=TRUE, major.by = 100000000
+                              
+)
+
+#Add a label
+text(0, 0.1, "EVE Insertion Sites", cex = 1)
+text(0, 0, paste0("Number Intronic"," = ",nrow(intronic)), cex=0.75, col="darkgreen")
+text(0, -0.05, paste0("Number Intergenic"," = ",nrow(intergenic)), cex=0.75, col="darkblue")
+
+#Add cytobanding
+circos.genomicIdeogram(track.height = .05)
+
+#Blank track
+circos.track(ylim = c(0, 1), panel.fun = function(x, y) {
+  chr = CELL_META$sector.index
+  xlim = CELL_META$xlim
+  ylim = CELL_META$ylim
+  circos.rect(xlim[1], 0, xlim[2], 1, col = "white")
+}, track.height = 0.1, bg.border = NA)
+
+
+circos.trackLines(intergenic$Chromosome, intergenic$Start, intergenic$Y, type="h", lwd=2,
+                   col = alpha("darkblue", 0.75), baseline = 0.05)
+
+
+circos.trackLines(intronic$Chromosome, intronic$Start, intronic$Y, type="h", lwd=2,
+                  col= alpha("darkgreen", 0.75), baseline = 0.05)
+
+
+#Blank track
+circos.track(ylim = c(0, max(na.omit(data$`Divergence Time From Humans`))), panel.fun = function(x, y) {
+  chr = CELL_META$sector.index
+  xlim = CELL_META$xlim
+  ylim = CELL_META$ylim
+  circos.rect(xlim[1], 0, xlim[2], max(na.omit(data$`Divergence Time From Humans`)), col = "white")
+}, track.height = 0.175, bg.border = NA)
+
+#circos.trackPoints(intronicAge$Chromosome, intronicAge$Start, intronicAge$Age, col="darkgreen", pch=16, cex=0.5)
+#circos.trackPoints(intergenicAge$Chromosome, intergenicAge$Start, intergenicAge$Age, col="darkblue", pch=16, cex=0.5)
+#circos.yaxis(side="right", labels.cex=0.5, at=c(0,25,50,75, 100))
+
+circos.trackPoints(intronicAge$Chromosome, intronicAge$Start, max(na.omit(data$`Divergence Time From Humans`))-intronicAge$`Divergence Time From Humans`, bg=alpha("darkgreen", 0.75),
+                   col=alpha("black", 0.75), pch=21, cex=0.75)
+
+circos.trackPoints(intergenicAge$Chromosome, intergenicAge$Start, max(na.omit(data$`Divergence Time From Humans`))-intergenicAge$`Divergence Time From Humans`, bg=alpha("darkblue", 0.75),
+                   col=alpha("black", 0.75), pch=21, cex=0.75)
+circos.yaxis(side="right", labels.cex=0.5, at=c(0,100,200,300), labels=c(300,200,100,0))
+
+#Including gene labels
+# Commented out 05032021 by MAC
+#circos.genomicLabels(data.frame(beds), labels.column = 4, side = "inside", cex = 0.3,
+ #                    col = beds$Color)
+
+dev.off()
+```
+

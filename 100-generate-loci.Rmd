@@ -172,3 +172,65 @@ table<-read_csv("meta/eve-meta-hg38-05032021.csv") %>% left_join(df5, by=c("EVE"
 write_csv(table, "meta/full-table.csv")
 ```
 
+## Body Size
+Not for this project, but most conveniently done here. https://figshare.com/articles/dataset/Full_Archive/3531875?backTo=/collections/PanTHERIA_a_species-level_database_of_life_history_ecology_and_geography_of_extant_and_recently_extinct_mammals/3301274 
+
+
+```{r}
+pan<-read_tsv("outputs/100/3531875/ECOL_90_184/PanTHERIA_1-0_WR05_Aug2008.txt", na = c("-999", "-999.00"))
+```
+
+Create a column to join on and select body size     
+organism="genus_species"
+Species="genus species"
+```{r}
+pan2<-pan %>% mutate(organism=paste0(MSW05_Genus,"_",MSW05_Species), Species=MSW05_Binomial) %>%
+                       select(organism, Species,`5-1_AdultBodyMass_g`) %>% 
+                       rename(`Body Mass (g)`=`5-1_AdultBodyMass_g`)
+
+```
+
+```{r}
+ggplot(pan2)+
+  geom_histogram(aes(x=log10(`Body Mass (g)`)))
+```
+
+Add to tree     
+```{r}
+t %<+% pan2 +
+  geom_tippoint(aes(color=log10(`Body Mass (g)`)))+
+  scale_color_viridis_c(direction = -1) 
+
+```
+
+Now, let's count up the number of loci/organism,
+
+```{r}
+counts<-data %>% group_by(organism) %>% summarize(Count=n())
+
+t %<+% left_join(pan2,counts) +
+  geom_tiplab(offset = 30, size=1) +
+  geom_tippoint(aes(color=log10(`Body Mass (g)`)), pch=15)+
+  geom_tippoint(aes(x=x+20, size=Count), alpha=0.75) +
+  scale_color_viridis_c(direction = -1) +
+  xlim(0,500)
+ggsave("outputs/100/tree-with-mass.pdf", height=24, width=8)
+
+```
+
+```{r}
+surveyed<-read_csv("~/github/Parvoviridae-GLUE/digs/vertebrate-genomes-screened.csv")
+temp<-left_join(pan2, surveyed) %>% na.omit() %>% left_join(counts)
+temp$Count<-replace_na(temp$Count, 0)
+rels<-temp %>% mutate(LogMass=log10(`Body Mass (g)`))
+
+#https://stackoverflow.com/questions/37329074/geom-smooth-and-exponential-fits
+exp.model <-lm(Count ~ exp(-LogMass), rels)
+lm<-lm(Count~LogMass, rels)
+ggplot(rels) +
+  geom_point(aes(x=LogMass, y=Count)) +
+ # geom_smooth(method="lm", aes(x=LogMass, y=Count, color="Exp Model"), formula= (y ~ exp(-x)), 
+      #        se=FALSE, linetype = 1) +
+  geom_smooth(aes(x=LogMass, y=Count), method="lm", formula=(y~x))
+
+```

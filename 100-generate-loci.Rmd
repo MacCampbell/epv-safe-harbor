@@ -206,7 +206,7 @@ t %<+% pan2 +
 Now, let's count up the number of loci/organism,
 
 ```{r}
-counts<-data %>% group_by(organism) %>% summarize(Count=n())
+counts<-df3 %>% filter(Age < 10) %>% group_by(organism) %>% summarize(Count=n())
 
 t %<+% left_join(pan2,counts) +
   geom_tiplab(offset = 30, size=1) +

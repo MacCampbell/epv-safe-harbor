@@ -13,7 +13,7 @@ ENPP1	Experiment	Donor.3
 ENPP2	Experiment	Donor.4		
 Control-1	Control	Donor.5	Control-1_R1_001.fastq.gz	Control-1_R2_001.fastq.gz
 Control-2	Control	Donor.6	Control-2_R1_001.fastq.gz	Control-2_R2_001.fastq.gz
-Control-3	Control	Donor.7	Control-2_R1_001.fastq.gz	Control-2_R2_001.fastq.gz
+Control-3	Control	Donor.7	Control-3_R1_001.fastq.gz	Control-3_R2_001.fastq.gz
 NUP-1	Experiment	Donor.5	NUP-1_R1_001.fastq.gz	NUP-1_R2_001.fastq.gz
 NUP-2	Experiment	Donor.6	NUP-2_R1_001.fastq.gz	NUP-2_R2_001.fastq.gz
 NUP-3	Experiment	Donor.7	NUP-3_R1_001.fastq.gz	NUP-3_R2_001.fastq.gz

@@ -83,5 +83,8 @@ set up 101.2-diamond-batch.slurm to try
 
 have 9 samples, so
 
-sbatch -p med -J diamond.$USER --array=1-9 101.2-diamond-batch.slurm;
+sbatch -p bigmemm -J diamond.$USER --array=1-9 101.2-diamond-batch.slurm;
+
+Is running!!
+
 

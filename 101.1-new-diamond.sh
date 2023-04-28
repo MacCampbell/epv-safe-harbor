@@ -1,4 +1,3 @@
-Command
 diamond blastx -d  reference/diamond/seqs -q data/raw/Control-1_R1_001.fastq.gz -o outputs/101/Control-1-diamond
 diamond blastx -d  reference/diamond/seqs -q data/raw/Control-2_R1_001.fastq.gz -o outputs/101/Control-2-diamond
 diamond blastx -d  reference/diamond/seqs -q data/raw/Control-2_R1_001.fastq.gz -o outputs/101/Control-3-diamond

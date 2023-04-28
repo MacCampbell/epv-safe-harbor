@@ -59,7 +59,7 @@ header<-c("Query","Subj","%id","Length","Mismatch","Gap-open","Qstart","Qend","S
 Working command diamond blastx -d seqs -q ~/Downloads/AA SRR17216319.fastq.gz \
   -o AVVS1-2-diamond 
 
-working batch command 
+working  command 
 srun -p high -t 10:00:00 --ntasks=8 --cpus-per-task=1 --mem-per-cpu=50G parallel -j 8 < diamond-commands.txt
 
 ```{r}
@@ -68,6 +68,20 @@ new<-meta %>% filter(Donor %in% c("Donor.5","Donor.6","Donor.7"))
 ```
 
 ```{r}
-command<-new %>% mutate(Command=paste0("diamond blastx -d  reference/diamond/seqs -q", "data/raw/",
-                                       SeqFile1, " -o outputs/101/",Sample,"-diamond"))
+command<-new %>% mutate(Command=paste0("diamond blastx -d  reference/diamond/seqs -q ", "data/raw/",
+                                       Seqfile1, " -o outputs/101/",Sample,"-diamond"))
+write_tsv(command %>% select(Command), file="101.1-new-diamond.sh", col_names = FALSE)
+```
+
+Considering a batch command
+
+```{r}
+write_tsv(new %>% select(Sample), col_names = FALSE, file="meta/samples.txt")
+```
+
+set up 101.2-diamond-batch.slurm to try
+
+have 9 samples, so
+
+sbatch -p med -J diamond.$USER --array=1-9 101.2-diamond-batch.slurm;
 

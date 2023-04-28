@@ -1,0 +1,66 @@
+---
+title: "101-set-up"
+output: html_document
+date: "2023-04-28"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
+```
+
+```{r}
+library(tidyverse)
+```
+
+Putting data in 
+$HOME/data/epv-safe-harbor/30-818141807    
+sym linking to data/raw/
+
+
+## Set up for analyses
+
+Setting up FARM for analyses. Recent update has set a few things back. Checking for working modules
+ module load STAR    
+ERROR: Unable to locate a modulefile for 'STAR'     
+
+(base) maccamp@farm:~$ STAR       
+Usage: STAR  [options]... --genomeDir /path/to/genome/index/   --readFilesIn R1.fq R2.fq     
+
+Great! I have installed this at some point.    
+`rsync -a -P rsync://ftp.ncbi.nlm.nih.gov/genomes/all/GCA/000/001/405/GCA_000001405.29_GRCh38.p14/ .`    
+
+`mkdir STAR`     
+
+`(base) maccamp@farm:~/genomes/hg38$ srun -p bigmemh -t 24:00:00 --mem=300GB --nodes=1 STAR --runThreadN 5 --runMode genomeGenerate --genomeDir ./STAR --genomeFastaFiles GCA_000001405.29_GRCh38.p14_genomic.fna --sjdbGTFfile GCA_000001405.29_GRCh38.p14_genomic.gtf`      
+
+Salmon?
+
+`(base) maccamp@farm:~$ module load salmon`    
+Loading salmon/1.9.0    
+
+`(base) maccamp@farm:~$ module load snakemake`     
+ERROR: Unable to locate a modulefile for 'snakemake'     
+
+conda install -n base -c conda-forge mamba
+conda activate base
+mamba create -c conda-forge -c bioconda -n snakemake snakemake
+
+
+## diamond check
+
+Build 
+
+```{sh, eval=FALSE}
+diamond makedb --in seqs.faa -d reference/seqs
+```
+
+  
+header<-c("Query","Subj","%id","Length","Mismatch","Gap-open","Qstart","Qend","Sstart","Send","e-value","Bitscore") 
+Working command diamond blastx -d seqs -q ~/Downloads/AA SRR17216319.fastq.gz \
+  -o AVVS1-2-diamond 
+  
+```{r}
+
+
+```
+

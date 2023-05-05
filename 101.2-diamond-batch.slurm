@@ -33,7 +33,7 @@ module load diamond/2.0.15
 call="diamond blastx \
 -d reference/diamond/seqs \
 -q $seqP/${name}_R1_001.fastq.gz \
--o $outP/${name}-diamond"
+-o $outP/${name}-diamond.tsv"
 
 echo $call
 eval $call

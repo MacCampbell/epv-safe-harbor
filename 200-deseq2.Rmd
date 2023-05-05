@@ -1,0 +1,294 @@
+---
+title: "200-deseq2"
+output: html_document
+date: "2023-05-05"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+## Examine some RNAseq
+
+```{r}
+library(tidyverse)
+library(ggrepel)
+library(DESeq2)
+library(pheatmap)
+library(RColorBrewer)
+
+```
+
+some data:
+/home/maccamp/longfin/data/azenta/30-818141807/01_Analysis/hit-counts
+
+"ID","Control.3","Control.2","Control.1","NUP.3","NUP.2","NUP.1","PVT.3","PVT.2","PVT.1","Gene.name"
+
+
+
+```{r}
+dat<-read_csv("outputs/200/raw_counts.csv") %>% select(-Gene.name) %>%
+  relocate(ID) %>% dplyr::rename(gene_id=ID)
+write_tsv(dat, file="outputs/200/gene-counts.tsv")
+cts <- as.matrix(read.csv("outputs/200/gene-counts.tsv",sep="\t",row.names="gene_id"))
+head(cts)
+```
+
+```{r}
+coldata <- read.csv("outputs/200/coldata.tsv", sep="\t", row.names=1)
+coldata$Category <- factor(coldata$Category)
+coldata$Donor <- factor(coldata$Donor)
+
+coldata
+```
+
+```{r}
+dds <- DESeqDataSetFromMatrix(countData = cts,
+                              colData = coldata,
+                              design = ~Donor + Category )
+keep <- rowSums(counts(dds)) >= 10
+dds <- dds[keep,]
+keep <- rowSums(counts(dds)) <= 10000
+dds <- dds[keep,]
+
+vsd <- vst(dds, blind=FALSE)
+ntd <- normTransform(dds)
+```
+
+```{r}
+pcaData <- plotPCA(ntd, intgroup=c("Category", "Donor"), returnData=TRUE)
+percentVar <- round(100 * attr(pcaData, "percentVar"))
+
+ggplot(pcaData, aes(PC1, PC2, fill=Donor, shape=Category)) +
+  geom_point(size=3) +
+  xlab(paste0("PC1: ",percentVar[1],"% variance")) +
+  ylab(paste0("PC2: ",percentVar[2],"% variance")) + 
+  coord_fixed() +
+  theme_bw() +
+  theme(panel.grid=element_blank()) +
+  scale_fill_viridis_d(option="magma") +
+  scale_shape_manual(values=c(21,22,23)) +
+  guides(fill = guide_legend(override.aes=list(shape=c(22)))) 
+```
+
+## Check on counts
+
+```{r}
+pcaData$RawGFP<-c(92,22,901,1510,188,311,30,93,196)
+ggplot(pcaData, aes(PC1, PC2, fill=Donor, shape=Category)) +
+  geom_point(size=3) +
+  geom_text_repel(aes(label=paste0(name,"-",RawGFP))) +
+  xlab(paste0("PC1: ",percentVar[1],"% variance")) +
+  ylab(paste0("PC2: ",percentVar[2],"% variance")) + 
+  coord_fixed() +
+  theme_bw() +
+  theme(panel.grid=element_blank()) +
+  scale_fill_viridis_d(option="magma") +
+  scale_shape_manual(values=c(21,22,23)) +
+  guides(fill = guide_legend(override.aes=list(shape=c(22)))) 
+```
+
+Control-1-diamond
+901
+Control-2-diamond
+22
+Control-3-diamond
+92
+NUP-1-diamond
+311
+NUP-2-diamond
+188
+NUP-3-diamond
+1510
+PVT-1-diamond
+196
+PVT-2-diamond
+93
+PVT-3-diamond
+30
+
+Sample ID,Total Reads
+Control-1,48562130
+Control-2,44874485
+Control-3,42834918
+NUP-1,45971072
+NUP-2,45059136
+NUP-3,41115241
+PVT-1,45790007
+PVT-2,46009306
+PVT-3,41255632
+
+Cluster
+```{r}
+select <- order(rowMeans(counts(dds,normalized=FALSE)),
+                decreasing=TRUE)[1:52]
+df <- as.data.frame(colData(dds)[,c("Category","Donor")])
+pheatmap(assay(ntd)[select,], cluster_rows=TRUE, show_rownames=FALSE,
+         cluster_cols=TRUE, annotation_col=df)
+```
+
+```{r}
+sampleDists <- dist(t(assay(ntd)))
+
+sampleDistMatrix <- as.matrix(sampleDists)
+rownames(sampleDistMatrix) <- paste(vsd$Category, vsd$Donor, sep="-")
+colnames(sampleDistMatrix) <- NULL
+colors <- colorRampPalette( rev(brewer.pal(9, "Blues")) )(255)
+pheatmap(sampleDistMatrix,
+         clustering_distance_rows=sampleDists,
+         clustering_distance_cols=sampleDists,
+         col=colors)
+```
+```{r}
+select <- order(rowMeans(counts(dds,normalized=FALSE)),
+                decreasing=TRUE)[1:20]
+df <- as.data.frame(colData(dds)[,c("Category","Donor")])
+pheatmap(assay(ntd)[select,], cluster_rows=FALSE, show_rownames=FALSE,
+         cluster_cols=FALSE, annotation_col=df)
+```
+## Subset
+
+
+```{r}
+dat<-read_csv("outputs/200/raw_counts.csv") %>% select(-Gene.name) %>%
+  relocate(ID) %>% dplyr::rename(gene_id=ID) %>%
+  select(-PVT.3, -PVT.2,-PVT.1)
+write_tsv(dat, file="outputs/200/NUP-counts.tsv")
+cts <- as.matrix(read.csv("outputs/200/NUP-counts.tsv",sep="\t",row.names="gene_id"))
+head(cts)
+```
+
+```{r}
+coldata <- read.csv("outputs/200/nup-data.tsv", sep="\t", row.names=1)
+coldata$Category <- factor(coldata$Category)
+coldata$Donor <- factor(coldata$Donor)
+
+coldata
+```
+
+```{r}
+dds <- DESeqDataSetFromMatrix(countData = cts,
+                              colData = coldata,
+                              design = ~Donor + Category )
+keep <- rowSums(counts(dds)) >= 10
+dds <- dds[keep,]
+vsd <- vst(dds, blind=FALSE)
+ntd <- normTransform(dds)
+
+```
+
+```{r}
+pcaData <- plotPCA(ntd, intgroup=c("Category", "Donor"), returnData=TRUE)
+percentVar <- round(100 * attr(pcaData, "percentVar"))
+pcaData$RawGFP<-c(92,22,901,1510,188,311)
+
+ggplot(pcaData, aes(PC1, PC2, fill=Donor, shape=Category)) +
+  geom_point(size=3) +
+  geom_text_repel(aes(label=RawGFP)) +
+  xlab(paste0("PC1: ",percentVar[1],"% variance")) +
+  ylab(paste0("PC2: ",percentVar[2],"% variance")) + 
+  coord_fixed() +
+  theme_bw() +
+  theme(panel.grid=element_blank()) +
+  scale_fill_viridis_d(option="magma") +
+  scale_shape_manual(values=c(21,22,23)) +
+  guides(fill = guide_legend(override.aes=list(shape=c(22)))) 
+```
+
+
+
+```{r}
+dat<-read_csv("outputs/200/raw_counts.csv") %>% select(-Gene.name) %>%
+  relocate(ID) %>% dplyr::rename(gene_id=ID) %>%
+  select(-NUP.3, -NUP.2, -NUP.1)
+write_tsv(dat, file="outputs/200/PVT-counts.tsv")
+cts <- as.matrix(read.csv("outputs/200/PVT-counts.tsv",sep="\t",row.names="gene_id"))
+head(cts)
+```
+
+```{r}
+coldata <- read.csv("outputs/200/pvt-data.tsv", sep="\t", row.names=1)
+coldata$Category <- factor(coldata$Category)
+coldata$Donor <- factor(coldata$Donor)
+
+coldata
+```
+
+```{r}
+dds <- DESeqDataSetFromMatrix(countData = cts,
+                              colData = coldata,
+                              design = ~Donor + Category )
+keep <- rowSums(counts(dds)) >= 10
+dds <- dds[keep,]
+vsd <- vst(dds, blind=FALSE)
+ntd <- normTransform(dds)
+
+```
+
+```{r}
+pcaData <- plotPCA(ntd, intgroup=c("Category", "Donor"), returnData=TRUE)
+percentVar <- round(100 * attr(pcaData, "percentVar"))
+pcaData$RawGFP<-c(92,22,901,30,93,196)
+
+ggplot(pcaData, aes(PC1, PC2, fill=Donor, shape=Category)) +
+  geom_point(size=3) + 
+  geom_text_repel(aes(label=RawGFP)) +
+  xlab(paste0("PC1: ",percentVar[1],"% variance")) +
+  ylab(paste0("PC2: ",percentVar[2],"% variance")) + 
+  coord_fixed() +
+  theme_bw() +
+  theme(panel.grid=element_blank()) +
+  scale_fill_viridis_d(option="magma") +
+  scale_shape_manual(values=c(21,22,23)) +
+  guides(fill = guide_legend(override.aes=list(shape=c(22)))) 
+```
+
+```{r}
+counts<-read_csv("outputs/200/TPM_values.csv")  %>% select(-Gene.name)
+
+#transpose
+t<-t(counts %>% select(-ID))
+colnames(t)<-counts$ID
+pca<-prcomp(t)
+
+x<-as_tibble(pca$x)
+x$Sample<-rownames(pca$x) 
+
+#get eigenvalues
+eigen<-pca$sdev^2
+eigen <- tibble(PC = factor(1:length(eigen)), 
+                         variance = eigen) %>% 
+  mutate(PercentVariance = variance/sum(variance)*100) %>% 
+  mutate(Cumulatative = cumsum(PercentVariance))
+
+eigen
+```
+
+```{r}
+ggplot(x, aes(x=PC1, y=PC2)) +
+  geom_point() +
+  geom_text_repel(aes(label=Sample)) +
+  theme_bw() +
+  theme(panel.grid=element_blank())
+```
+```{r}
+dat<-as_tibble(pca$rotation)
+dat$ID<-row.names(pca$rotation)
+
+
+load1<-dat %>% select(ID, PC1) %>% arrange(-PC1) %>%
+  mutate(Index=1:n())
+
+ggplot(load1, aes(x=Index, y=PC1)) +  geom_point()
+
+```
+
+```{r}
+
+counts %>% filter(ID %in% c("ENSG00000163751",
+                            "ENSG00000163737",
+                            "ENSG00000163736",
+                            "ENSG00000244734"))
+```
+
+

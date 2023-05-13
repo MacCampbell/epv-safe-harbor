@@ -1,0 +1,217 @@
+---
+title: "201-deseq2-testing"
+output: html_document
+date: "2023-05-05"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
+```
+
+
+```{r}
+library(tidyverse)
+library(ggrepel)
+library(DESeq2)
+library(pheatmap)
+library(RColorBrewer)
+```
+
+Setting up custom plot PCA
+
+```{r}
+getPCA = function(object, intgroup="condition", ntop=500, returnData=FALSE, pcs=2)
+{
+  # calculate the variance for each gene
+  rv <- rowVars(assay(object))
+
+  # select the ntop genes by variance
+  select <- order(rv, decreasing=TRUE)[seq_len(min(ntop, length(rv)))]
+
+  # perform a PCA on the data in assay(x) for the selected genes
+  pca <- prcomp(t(assay(object)[select,]))
+
+  # the contribution to the total variance for each component
+  percentVar <- pca$sdev^2 / sum( pca$sdev^2 )
+
+  if (!all(intgroup %in% names(colData(object)))) {
+    stop("the argument 'intgroup' should specify columns of colData(dds)")
+  }
+
+  intgroup.df <- as.data.frame(colData(object)[, intgroup, drop=FALSE])
+  
+  # add the intgroup factors together to create a new grouping factor
+  group <- if (length(intgroup) > 1) {
+    factor(apply( intgroup.df, 1, paste, collapse=":"))
+  } else {
+    colData(object)[[intgroup]]
+  }
+
+  # assembly the data for the plot
+ # d <- data.frame(PC1=pca$x[,1], PC2=pca$x[,2], group=group, intgroup.df, name=colnames(object))
+  d <- cbind(pca$x[,seq_len(min(pcs, ncol(pca$x))), drop = FALSE], data.frame(group = group, intgroup.df, name = colnames(object)))
+
+
+  if (returnData) {
+    #    attr(d, "percentVar") <- percentVar[1:2]
+
+    attr(d, "percentVar") <- percentVar[1:pcs]
+    return(d)
+  }
+  
+  ggplot(data=d, aes_string(x="PC1", y="PC2", color="group")) + geom_point(size=3) + 
+    xlab(paste0("PC1: ",round(percentVar[1] * 100),"% variance")) +
+      ylab(paste0("PC2: ",round(percentVar[2] * 100),"% variance")) +
+        coord_fixed()
+}
+```
+# Get DE genes
+
+## NUP
+```{r}
+cts <- as.matrix(read.csv("outputs/200/NUP-counts.tsv",sep="\t",row.names="gene_id")) 
+#cts<-cts[,c("Control.3","Control.2","NUP.3","NUP.2")]
+#cts<-cts[,c("Control.3","Control.1","NUP.3","NUP.1")]
+coldata <- read.csv("outputs/200/nup-data.tsv", sep="\t", row.names=1)
+#coldata <- coldata %>%  filter(Donor != "Donor.5")
+coldata$Category <- factor(coldata$Category)
+coldata$Donor <- factor(coldata$Donor)
+
+```
+
+```{r}
+dds <- DESeqDataSetFromMatrix(countData = cts,
+                              colData = coldata,
+                              design = ~Donor + Category )
+keep <- rowSums(counts(dds)) >= 10
+dds <- dds[keep,]
+
+
+vsd <- vst(dds, blind=FALSE)
+ntd <- normTransform(dds)
+```
+
+
+```{r}
+pcaData <- getPCA(vsd, intgroup=c("Category", "Donor"), returnData=TRUE, pcs=5)
+percentVar <- round(100 * attr(pcaData, "percentVar"))
+
+p12<-ggplot(pcaData, aes(PC1, PC2, fill=Donor, shape=Category)) +
+  geom_point(size=3) +
+  xlab(paste0("PC1: ",percentVar[1],"% variance")) +
+  ylab(paste0("PC2: ",percentVar[2],"% variance")) + 
+  coord_fixed() +
+  theme_bw() +
+  theme(panel.grid=element_blank()) +
+  scale_fill_viridis_d(option="magma") +
+  scale_shape_manual(values=c(21,22,23)) +
+  guides(fill = guide_legend(override.aes=list(shape=c(22)))) 
+
+p12
+```
+
+```{r}
+p13<-ggplot(pcaData, aes(PC1, PC3, fill=Donor, shape=Category)) +
+  geom_point(size=3) +
+  xlab(paste0("PC1: ",percentVar[1],"% variance")) +
+  ylab(paste0("PC3: ",percentVar[3],"% variance")) + 
+  coord_fixed() +
+  theme_bw() +
+  theme(panel.grid=element_blank()) +
+  scale_fill_viridis_d(option="magma") +
+  scale_shape_manual(values=c(21,22,23)) +
+  guides(fill = guide_legend(override.aes=list(shape=c(22)))) 
+
+p13
+```
+
+```{r}
+dds <- DESeq(dds)
+res <- results(dds)
+
+resOrdered <- res[order(res$pvalue),]
+
+summary(res)
+```   
+
+```{r}
+results<-as_tibble(resOrdered)
+results$Gene<-rownames(resOrdered)
+results<-results %>% relocate(Gene) %>% filter(padj<0.05, abs(log2FoldChange) >= 1)
+results
+```
+
+```{r}
+counts<-read_csv("outputs/200/TPM_values.csv")  %>% select(-Gene.name)
+counts
+```
+## PVT
+# Get DE genes
+
+```{r}
+cts <- as.matrix(read.csv("outputs/200/PVT-counts.tsv",sep="\t",row.names="gene_id"))
+coldata <- read.csv("outputs/200/pvt-data.tsv", sep="\t", row.names=1)
+coldata$Category <- factor(coldata$Category)
+coldata$Donor <- factor(coldata$Donor)
+```
+
+```{r}
+dds <- DESeqDataSetFromMatrix(countData = cts,
+                              colData = coldata,
+                              design = ~Donor + Category )
+keep <- rowSums(counts(dds)) >= 10
+dds <- dds[keep,]
+#keep <- rowSums(counts(dds)) <= 10000
+#dds <- dds[keep,]
+vsd <- vst(dds, blind=FALSE)
+ntd <- normTransform(dds)
+```
+
+```{r}
+pcaData <- getPCA(ntd, intgroup=c("Category", "Donor"), returnData=TRUE, pcs=5)
+percentVar <- round(100 * attr(pcaData, "percentVar"))
+
+p12<-ggplot(pcaData, aes(PC1, PC2, fill=Donor, shape=Category)) +
+  geom_point(size=3) +
+  xlab(paste0("PC1: ",percentVar[1],"% variance")) +
+  ylab(paste0("PC2: ",percentVar[2],"% variance")) + 
+  coord_fixed() +
+  theme_bw() +
+  theme(panel.grid=element_blank()) +
+  scale_fill_viridis_d(option="magma") +
+  scale_shape_manual(values=c(21,22,23)) +
+  guides(fill = guide_legend(override.aes=list(shape=c(22)))) 
+
+p12
+```
+
+```{r}
+p13<-ggplot(pcaData, aes(PC1, PC3, fill=Donor, shape=Category)) +
+  geom_point(size=3) +
+  xlab(paste0("PC1: ",percentVar[1],"% variance")) +
+  ylab(paste0("PC3: ",percentVar[3],"% variance")) + 
+  coord_fixed() +
+  theme_bw() +
+  theme(panel.grid=element_blank()) +
+  scale_fill_viridis_d(option="magma") +
+  scale_shape_manual(values=c(21,22,23)) +
+  guides(fill = guide_legend(override.aes=list(shape=c(22)))) 
+
+p13
+```
+
+```{r}
+dds <- DESeq(dds)
+res <- results(dds)
+
+resOrdered <- res[order(res$pvalue),]
+
+summary(res)
+```   
+
+```{r}
+results<-as_tibble(resOrdered)
+results$Gene<-rownames(resOrdered)
+results<-results %>% relocate(Gene) %>% filter(padj<0.05, abs(log2FoldChange) >= 1)
+results
+```

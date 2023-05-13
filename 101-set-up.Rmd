@@ -87,4 +87,48 @@ sbatch -p bigmemm -J diamond.$USER --array=1-9 101.2-diamond-batch.slurm;
 
 Is running!!
 
+ cat Control-2-diamond | grep Mammalian  | awk '{ if ($4 > 44 && $3 > 99) { print } }' | wc -l
+22
+
+for f in *diamond; do echo $f; cat $f | grep Mammalian  | awk '{ if ($4 > 44 && $3 > 99) { print } }' | wc -l; done;
+
+(base) maccamp@farm:~/epv-safe-harbor/outputs/101$ for f in *diamond; do echo $f; cat $f | grep Mammalian  | awk '{ if ($4 > 40 && $3 > 99) { print } }' | wc -l; done;
+Control-1-diamond
+0
+Control-2-diamond
+29
+Control-3-diamond
+0
+NUP-1-diamond
+345
+NUP-2-diamond
+229
+NUP-3-diamond
+1647
+PVT-1-diamond
+229
+PVT-2-diamond
+100
+PVT-3-diamond
+35
+
+(base) maccamp@farm:~/epv-safe-harbor/outputs/101$ for f in *diamond; do echo $f; cat $f | grep Mammalian  | awk '{ if ($4 > 44 && $3 > 99) { print } }' | wc -l; done;
+Control-1-diamond
+901
+Control-2-diamond
+22
+Control-3-diamond
+92
+NUP-1-diamond
+311
+NUP-2-diamond
+188
+NUP-3-diamond
+1510
+PVT-1-diamond
+196
+PVT-2-diamond
+93
+PVT-3-diamond
+30
 

@@ -1,0 +1,77 @@
+---
+title: "202-tpm-pca"
+output: html_document
+date: "2023-05-12"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
+```
+
+```{r}
+library(tidyverse)
+```
+
+### What about loadings?        
+```{r}
+counts<-read_csv("outputs/200/TPM_values.csv") %>% 
+  select(ID, Control.3, Control.2, Control.1, NUP.3, NUP.2, NUP.1, -PVT.3, PVT.2, PVT.1)
+#transpose
+t<-t(counts %>% select(-ID))
+colnames(t)<-counts$ID
+pca<-prcomp(t)
+
+x<-as_tibble(pca$x)
+x$Sample<-rownames(pca$x) 
+
+#get eigenvalues
+eigen<-pca$sdev^2
+eigen <- tibble(PC = factor(1:length(eigen)), 
+                         variance = eigen) %>% 
+  mutate(PercentVariance = variance/sum(variance)*100) %>% 
+  mutate(Cumulatative = cumsum(PercentVariance))
+
+eigen
+```
+
+```{r}
+ggplot(x, aes(x=PC1, y=PC2)) +
+  geom_point() +
+  geom_text(aes(label=Sample)) +
+  theme_bw() +
+  theme(panel.grid=element_blank())
+
+ggplot(x, aes(x=PC1, y=PC3)) +
+  geom_point() +
+  geom_text(aes(label=Sample)) +
+  theme_bw() +
+  theme(panel.grid=element_blank())
+```
+```{r}
+dat<-as_tibble(pca$rotation)
+dat$ID<-row.names(pca$rotation)
+
+
+load1<-dat %>% select(ID, PC1) %>% arrange(-PC1) %>%
+  mutate(Index=1:n())
+
+ggplot(load1, aes(x=Index, y=PC1)) +  geom_point()
+
+```
+```{r}
+top1<-dat %>% select(ID, PC1, PC2) %>% arrange(-PC1)  %>% top_n(10, PC1) %>% mutate(Color="blue")
+top2<-dat %>% select(ID, PC1, PC2) %>% arrange(-PC1)  %>% top_n(10, -PC1) %>% mutate(Color="red")
+tops<-bind_rows(top1,top2)
+
+
+tpm<-read_csv("outputs/200/TPM_values.csv") %>% 
+  select(-Gene.name) %>%
+  filter(ID %in% tops$ID)
+
+tpm
+
+write_csv(tpm,"outputs/201/top-genes-pca-loadings.csv")
+```
+
+## To go stuff
+

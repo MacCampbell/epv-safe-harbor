@@ -1,0 +1,106 @@
+---
+title: "204-big-pint-enpp"
+output: html_document
+date: "2023-05-12"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
+```
+
+```{r}
+library(tidyverse)
+library(DESeq2)
+library(bigPint)
+library(plotly)
+```
+
+## Need some normalized data
+```{r}
+dat<-read_csv("data/intronic-raw-counts.csv") %>%
+  relocate(ID) %>% dplyr::rename(gene_id=ID)
+write_tsv(dat, file="outputs/204/gene-counts.tsv")
+cts <- as.matrix(read.csv("outputs/204/gene-counts.tsv",sep="\t",row.names="gene_id"))
+head(cts)
+```
+
+```{r}
+coldata <- read.csv("data/coldata-bcas-enpp.tsv", sep="\t", row.names=1)
+coldata$Category <- factor(coldata$Category)
+coldata$Donor <- factor(coldata$Donor)
+
+coldata
+```
+
+```{r}
+dds <- DESeqDataSetFromMatrix(countData = cts,
+                              colData = coldata,
+                              design = ~Donor + Category )
+keep <- rowSums(counts(dds)) >= 10
+dds <- dds[keep,]
+#keep <- rowSums(counts(dds)) <= 10000
+#dds <- dds[keep,]
+
+vsd <- vst(dds, blind=FALSE)
+ntd <- normTransform(dds)
+
+
+ntddata<-assay(ntd)
+vsddata<-assay(vsd)
+save(ntddata, file="outputs/204/ntd.rda")
+save(vsddata, file="outputs/204/vsd.rda")
+```
+
+
+## Set up normalized data
+
+```{r}
+data<-as_tibble(vsddata)
+data$ID<-rownames(vsddata)
+data<-data %>% relocate(ID)
+data
+```
+
+```{r}
+data_st <- as.data.frame(t(apply(as.matrix(data[,-1]), 1, scale)))
+data_st$ID <- as.character(data$ID)
+data_st <- data_st[,c(length(data_st), 1:length(data_st)-1)]
+colnames(data_st) <- colnames(data)
+nID <- which(is.nan(data_st[,2]))
+data_st[nID,2:length(data_st)] <- 0
+
+str(data_st, strict.width = "wrap")
+```
+
+
+
+```{r}
+ret <- plotPCP(data=data_st, saveFile = FALSE)
+
+ret[["BCAS_Control"]]
+ret[["Control_ENPP"]]
+```
+
+```{r}
+scatter <- plotSM(data=data, saveFile = FALSE)
+
+scatter[["BCAS_Control"]]
+scatter[["Control_ENPP"]]
+```
+
+```{r}
+pcaData <- plotPCA(ntd, intgroup=c("Category", "Donor"), returnData=TRUE)
+percentVar <- round(100 * attr(pcaData, "percentVar"))
+
+ggplot(pcaData, aes(PC1, PC2, fill=Donor, shape=Category)) +
+  geom_point(size=3) +
+  xlab(paste0("PC1: ",percentVar[1],"% variance")) +
+  ylab(paste0("PC2: ",percentVar[2],"% variance")) + 
+  geom_text_repel(aes(label=name)) +
+  coord_fixed() +
+  theme_bw() +
+  theme(panel.grid=element_blank()) +
+  scale_fill_viridis_d(option="magma") +
+  scale_shape_manual(values=c(21,22,23)) +
+  guides(fill = guide_legend(override.aes=list(shape=c(22)))) 
+```

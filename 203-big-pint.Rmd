@@ -1,0 +1,114 @@
+---
+title: "203-big-pint"
+output: html_document
+date: "2023-05-12"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
+```
+
+```{r}
+library(tidyverse)
+library(DESeq2)
+library(bigPint)
+library(plotly)
+```
+
+
+Test data
+
+```{r}
+data("soybean_cn_sub")
+data = soybean_cn_sub %>% select(ID, starts_with("S1"), starts_with("S3"))
+str(data, strict.width = "wrap")
+```
+
+
+Real data
+
+```{r}
+dat<-read_csv("outputs/200/raw_counts.csv") %>% select(-Gene.name) %>%
+  relocate(ID) %>% dplyr::rename(gene_id=ID)
+write_tsv(dat, file="outputs/200/gene-counts.tsv")
+cts <- as.matrix(read.csv("outputs/200/gene-counts.tsv",sep="\t",row.names="gene_id"))
+head(cts)
+```
+
+```{r}
+coldata <- read.csv("outputs/200/coldata.tsv", sep="\t", row.names=1)
+coldata$Category <- factor(coldata$Category)
+coldata$Donor <- factor(coldata$Donor)
+
+coldata
+```
+
+```{r}
+dds <- DESeqDataSetFromMatrix(countData = cts,
+                              colData = coldata,
+                              design = ~Donor + Category )
+keep <- rowSums(counts(dds)) >= 10
+dds <- dds[keep,]
+keep <- rowSums(counts(dds)) <= 10000
+dds <- dds[keep,]
+
+vsd <- vst(dds, blind=FALSE)
+ntd <- normTransform(dds)
+
+
+ntddata<-assay(ntd)
+vsddata<-assay(vsd)
+save(ntddata, file="outputs/200/ntd.rda")
+save(vsddata, file="outputs/200/vsd.rda")
+
+```
+
+
+```{r}
+load(file = "outputs/200/vsd.rda") # vssddata
+load(file = "outputs/200/ntd.rda") # ntddata
+```
+
+
+We will also create a standardized version of this count table, which we will refer to as data_st. In the standardized case, each gene will have a mean of zero and a standard deviation of one across its samples (Chandrasekhar, Thangavel, and Elayaraja 2012).
+
+```{r}
+data<-as_tibble(vsddata)
+data$ID<-rownames(vsddata)
+data<-data %>% relocate(ID)
+data
+```
+```{r}
+data_st <- as.data.frame(t(apply(as.matrix(data[,-1]), 1, scale)))
+data_st$ID <- as.character(data$ID)
+data_st <- data_st[,c(length(data_st), 1:length(data_st)-1)]
+colnames(data_st) <- colnames(data)
+nID <- which(is.nan(data_st[,2]))
+data_st[nID,2:length(data_st)] <- 0
+
+str(data_st, strict.width = "wrap")
+```
+
+
+
+```{r}
+ret <- plotPCP(data=data_st, saveFile = FALSE)
+ret[["Control_NUP"]]
+ret[["Control_PVT"]]
+```
+
+
+```{r}
+scatter <- plotSM(data=data, saveFile = FALSE)
+scatter[["Control_NUP"]]
+```
+
+```{r}
+scatter[["Control_PVT"]]
+```
+
+```{r}
+scatter[["NUP_PVT"]]
+```
+
+

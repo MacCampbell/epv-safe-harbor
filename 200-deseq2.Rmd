@@ -53,6 +53,13 @@ dds <- dds[keep,]
 
 vsd <- vst(dds, blind=FALSE)
 ntd <- normTransform(dds)
+
+
+ntddata<-assay(ntd)
+vsddata<-assay(vsd)
+save(ntddata, file="outputs/200/ntd.rda")
+save(vsddata, file="outputs/200/vsd.rda")
+
 ```
 
 ```{r}
@@ -143,7 +150,7 @@ pheatmap(sampleDistMatrix,
 select <- order(rowMeans(counts(dds,normalized=FALSE)),
                 decreasing=TRUE)[1:20]
 df <- as.data.frame(colData(dds)[,c("Category","Donor")])
-pheatmap(assay(ntd)[select,], cluster_rows=FALSE, show_rownames=FALSE,
+pheatmapas(assay(ntd)[select,], cluster_rows=FALSE, show_rownames=FALSE,
          cluster_cols=FALSE, annotation_col=df)
 ```
 ## Subset

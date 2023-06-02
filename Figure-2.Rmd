@@ -56,9 +56,12 @@ ggplot(dotplot, aes(x=LogTransformed, fill=Type)) +
         legend.text=element_text(size=14)) +
   facet_wrap(.~VirusGenus) +
   coord_fixed(ratio=2.5) +
-  ylim(0,1.5)
+  ylim(0,1.5) +
+  #theme(panel.grid=element_blank()) +
+  theme(legend.position = "none") +
+  theme(strip.text = element_text(size = 12))
 
-ggsave("outputs/figures/figure-2.pdf")
+ggsave("outputs/figures/figure-1b.pdf")
 ``` 
 
 Age & Precision

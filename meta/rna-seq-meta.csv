@@ -1,22 +1,22 @@
-Sample	Category	Donor	Seqfile1	Seqfile2
-AAVS1.2	Experiment	Donor.2		
-AAVS1.1	Experiment	Donor.1		
-Control.2	Control	Donor.2		
-Control.1	Control	Donor.1		
-KIF6.2	Experiment	Donor.2		
-KIF6.1	Experiment	Donor.1		
-BCAS1	Experiment	Donor.3		
-BCAS2	Experiment	Donor.4		
-Control1	Control	Donor.3		
-Control2	Control	Donor.4		
-ENPP1	Experiment	Donor.3		
-ENPP2	Experiment	Donor.4		
-Control-1	Control	Donor.5	Control-1_R1_001.fastq.gz	Control-1_R2_001.fastq.gz
-Control-2	Control	Donor.6	Control-2_R1_001.fastq.gz	Control-2_R2_001.fastq.gz
-Control-3	Control	Donor.7	Control-3_R1_001.fastq.gz	Control-3_R2_001.fastq.gz
-NUP-1	Experiment	Donor.5	NUP-1_R1_001.fastq.gz	NUP-1_R2_001.fastq.gz
-NUP-2	Experiment	Donor.6	NUP-2_R1_001.fastq.gz	NUP-2_R2_001.fastq.gz
-NUP-3	Experiment	Donor.7	NUP-3_R1_001.fastq.gz	NUP-3_R2_001.fastq.gz
-PVT-1	Experiment	Donor.5	PVT-1_R1_001.fastq.gz	PVT-1_R2_001.fastq.gz
-PVT-2	Experiment	Donor.6	PVT-2_R1_001.fastq.gz	PVT-2_R2_001.fastq.gz
-PVT-3	Experiment	Donor.7	PVT-3_R1_001.fastq.gz	PVT-3_R2_001.fastq.gz
+Sample,Category,Donor,Locus,Type,Seqfile1,Seqfile2
+AAVS1.2,Experiment,Donor.2,AAVS1,Intronic,,
+AAVS1.1,Experiment,Donor.1,AAVS1,Intronic,,
+Control.2,Experiment,Donor.1,Dep.2,Intronic,,
+Control.1,Control,Donor.1,Control,Control,,
+KIF6.2,Experiment,Donor.2,Dep.2,Intronic,,
+KIF6.1,Control,Donor.2,Control,Control,,
+BCAS1,Experiment,Donor.3,Dep.55,Intronic,,
+BCAS2,Experiment,Donor.4,Dep.55,Intronic,,
+Control1,Control,Donor.3,Control,Control,,
+Control2,Control,Donor.4,Control,Control,,
+ENPP1,Experiment,Donor.3,Prot.218,Intronic,,
+ENPP2,Experiment,Donor.4,Prot.218,Intronic,,
+Control-1,Control,Donor.5,Control,Control,Control-1_R1_001.fastq.gz,Control-1_R2_001.fastq.gz
+Control-2,Control,Donor.6,Control,Control,Control-2_R1_001.fastq.gz,Control-2_R2_001.fastq.gz
+Control-3,Control,Donor.7,Control,Control,Control-3_R1_001.fastq.gz,Control-3_R2_001.fastq.gz
+NUP-1,Experiment,Donor.5,Dep.3,Intergenic,NUP-1_R1_001.fastq.gz,NUP-1_R2_001.fastq.gz
+NUP-2,Experiment,Donor.6,Dep.3,Intergenic,NUP-2_R1_001.fastq.gz,NUP-2_R2_001.fastq.gz
+NUP-3,Experiment,Donor.7,Dep.3,Intergenic,NUP-3_R1_001.fastq.gz,NUP-3_R2_001.fastq.gz
+PVT-1,Experiment,Donor.5,Ap.102,Intergenic,PVT-1_R1_001.fastq.gz,PVT-1_R2_001.fastq.gz
+PVT-2,Experiment,Donor.6,Ap.102,Intergenic,PVT-2_R1_001.fastq.gz,PVT-2_R2_001.fastq.gz
+PVT-3,Experiment,Donor.7,Ap.102,Intergenic,PVT-3_R1_001.fastq.gz,PVT-3_R2_001.fastq.gz

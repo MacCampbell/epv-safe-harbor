@@ -1,0 +1,22 @@
+Sample	Category	Donor	Locus	Type	Seqfile1	Seqfile2
+AAVS1.2	Experiment	Donor.2	AAVS1	Intergenic
+AAVS1.1	Experiment	Donor.1	AAVS1	Intergenic
+Control.2	Control	Donor.2	Control	
+Control.1	Control	Donor.1	Control	
+KIF6.2	Experiment	Donor.2		
+KIF6.1	Experiment	Donor.1		
+BCAS1	Experiment	Donor.3		
+BCAS2	Experiment	Donor.4		
+Control1	Control	Donor.3		
+Control2	Control	Donor.4		
+ENPP1	Experiment	Donor.3		
+ENPP2	Experiment	Donor.4		
+Control-1	Control	Donor.5	Control-1_R1_001.fastq.gz	Control-1_R2_001.fastq.gz
+Control-2	Control	Donor.6	Control-2_R1_001.fastq.gz	Control-2_R2_001.fastq.gz
+Control-3	Control	Donor.7	Control-3_R1_001.fastq.gz	Control-3_R2_001.fastq.gz
+NUP-1	Experiment	Donor.5	NUP-1_R1_001.fastq.gz	NUP-1_R2_001.fastq.gz
+NUP-2	Experiment	Donor.6	NUP-2_R1_001.fastq.gz	NUP-2_R2_001.fastq.gz
+NUP-3	Experiment	Donor.7	NUP-3_R1_001.fastq.gz	NUP-3_R2_001.fastq.gz
+PVT-1	Experiment	Donor.5	PVT-1_R1_001.fastq.gz	PVT-1_R2_001.fastq.gz
+PVT-2	Experiment	Donor.6	PVT-2_R1_001.fastq.gz	PVT-2_R2_001.fastq.gz
+PVT-3	Experiment	Donor.7	PVT-3_R1_001.fastq.gz	PVT-3_R2_001.fastq.gz

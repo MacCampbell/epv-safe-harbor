@@ -1,0 +1,39 @@
+---
+title: "205-counts"
+output: html_document
+date: "2023-06-01"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
+```
+
+```{r}
+library(tidyverse)
+```
+
+Check samples/counts
+
+```{r}
+meta<-read_tsv("meta/rna-seq-meta.tsv")
+meta
+```
+
+```{r}
+d1<-read_csv("data/raw_counts-intronic.csv") %>% select(-Gene.name) 
+d2<-read_csv("data/raw_counts-intergenic.csv") %>% select(-Gene.name)
+df<-left_join(d1,d2)
+```
+
+
+Make tidy
+
+```{r}
+tdf<-df %>% pivot_longer(2:22, names_to = c("Sample"), values_to = c("Count"))
+```
+
+
+```{r}
+sum<-tdf %>% group_by(Sample) %>% summarize(Total=sum(Count)) %>% arrange(-Total) %>% left_join(meta %>% select(Sample, Donor))
+write_csv(sum, file="outputs/205/sums.csv")
+```

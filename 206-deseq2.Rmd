@@ -135,15 +135,6 @@ pheatmap(assay[rownames(assay) %in% rownames(res),], cluster_rows=TRUE, show_row
 
 dev.off()
 
-pdf(paste0("outputs/206/",locus,"-ward-heatmap.pdf"), width=8, height=10)
-
-pheatmap(assay[rownames(assay) %in% rownames(res),], cluster_rows=TRUE, show_rownames=FALSE,
-         cluster_cols=TRUE, annotation_col=ddf,
-         clustering_distance_cols = "ward.d2",
-         clustering_distance_rows = "ward.d2")
-
-dev.off()
-
 }
 ```
 

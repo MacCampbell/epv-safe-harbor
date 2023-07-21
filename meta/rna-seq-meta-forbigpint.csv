@@ -1,0 +1,13 @@
+Sample,Category,Donor,Locus,Type
+AAVS1.2,Experiment,Donor.2,AAVS1,Intronic
+AAVS1.1,Experiment,Donor.1,AAVS1,Intronic
+Control.2,Control,Donor.2,Control,Intronic
+Control.1,Control,Donor.1,Control,Control
+KIF6.2,Experiment,Donor.2,Dep.2,Intronic
+KIF6.1,Experiment,Donor.1,Dep.2,Control
+BCAS.1,Experiment,Donor.3,Dep.55,Intronic
+BCAS.2,Experiment,Donor.4,Dep.55,Intronic
+BEControl.1,Control,Donor.3,Control,Control
+BEControl.2,Control,Donor.4,Control,Control
+ENPP.1,Experiment,Donor.3,Prot.218,Intronic
+ENPP.2,Experiment,Donor.4,Prot.218,Intronic

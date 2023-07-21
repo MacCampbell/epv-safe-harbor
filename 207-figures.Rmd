@@ -1,0 +1,117 @@
+---
+title: "207-figures"
+output: html_document
+date: "2023-06-08"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
+```
+
+```{r}
+library(tidyverse)
+library(DESeq2)
+library(bigPint)
+library(plotly)
+```
+
+## Set up normalized data
+
+```{r}
+meta<-read_csv("meta/rna-seq-meta-forbigpint.csv")
+```
+
+```{r}
+dat<-read_csv("data/raw_counts-intronic-forbigpint.csv") %>% select(-Gene.name) %>%
+  relocate(ID) %>% dplyr::rename(gene_id=ID)
+```
+
+```{r}
+locus<-c("AAVS1","Dep.2","Dep.55","Prot.218")
+```
+
+```{r}
+coldata<-meta %>% filter(Locus %in% locus) %>% select(Sample, Category, Donor, Locus)
+coldata2<-meta %>% filter(Category=="Control") %>% filter(Donor %in% coldata$Donor) %>% select(Sample, Category, Donor, Locus)
+
+m<-bind_rows(coldata,coldata2)
+m$Category <- factor(m$Category, levels=c("Control","Experiment"))
+m$Donor <- factor(m$Donor)
+m<-as.data.frame(m)
+rownames(m)<-m$Sample
+m<-m %>% select(-Sample)
+
+
+d<-select(dat, gene_id, rownames(m)) 
+d<-as.data.frame(d)
+rownames(d)<-d$gene_id
+d<-d %>% select(-gene_id)
+
+dds <- DESeqDataSetFromMatrix(countData = d,
+                              colData = m,
+                              design = ~Donor + Category )
+
+#Drop low counts
+keep <- rowSums(counts(dds)) >= 100
+dds <- dds[keep,]
+
+#Create other data
+vsd <- vst(dds, blind=FALSE)
+ntd <- normTransform(dds)
+
+
+ntddata<-assay(ntd)
+vsddata<-assay(vsd)
+```
+
+```{r}
+data<-as_tibble(vsddata)
+data$ID<-rownames(vsddata)
+data<-data %>% relocate(ID)
+data
+```
+
+
+```{r}
+data_st <- as.data.frame(t(apply(as.matrix(data[,-1]), 1, scale)))
+data_st$ID <- as.character(data$ID)
+data_st <- data_st[,c(length(data_st), 1:length(data_st)-1)]
+colnames(data_st) <- colnames(data)
+nID <- which(is.nan(data_st[,2]))
+data_st[nID,2:length(data_st)] <- 0
+
+str(data_st, strict.width = "wrap")
+```
+
+
+```{r}
+ret <- plotPCP(data=data_st, saveFile = FALSE)
+
+ret[["BCAS_ControlBE"]]
+```
+
+```{r}
+scatter <- plotSM(data=data, saveFile = FALSE)
+```
+
+```{r}
+scatter[["AAVS1_Control"]] + theme_bw()
+ggsave("outputs/207/aavs1-corr.pdf")
+```
+
+
+```{r}
+scatter[["Control_KIF6"]] + theme_bw()
+ggsave("outputs/207/kif6-corr.pdf")
+```
+
+```{r}
+scatter[["BCAS_BEControl"]] + theme_bw()
+ggsave("outputs/207/bcas-corr.pdf")
+```
+
+
+```{r}
+scatter[["ENPP_BEControls"]] + theme_bw()
+ggsave("outputs/207/enpp-corr.pdf")
+```

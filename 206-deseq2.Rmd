@@ -24,12 +24,13 @@ meta<-read_csv("meta/rna-seq-meta.csv")
 ```
 
 ```{r}
-dat<-read_csv("data/raw_counts-intronic.csv") %>% select(-Gene.name) %>%
+dat<-read_csv("data/raw_counts-intronic-intergenic.csv") %>% select(-Gene.name) %>%
   relocate(ID) %>% dplyr::rename(gene_id=ID)
+
 ```
 
 ```{r}
-locus<-c("AAVS1","Dep.2","Dep.55","Prot.218")
+locus<-c("AAVS1","Dep.2","Dep.55","Prot.218","Dep.3","Ap.102")
 ```
 
 
@@ -68,7 +69,7 @@ ntddata<-assay(ntd)
 vsddata<-assay(vsd)
 
 #PCA for fun 
-pcaData <- plotPCA(ntd, intgroup=c("Category", "Donor"), returnData=TRUE)
+pcaData <- plotPCA(vsd, intgroup=c("Category", "Donor"), returnData=TRUE)
 percentVar <- round(100 * attr(pcaData, "percentVar"))
 
 ggplot(pcaData, aes(PC1, PC2, fill=Donor, shape=Category)) +
@@ -80,7 +81,9 @@ ggplot(pcaData, aes(PC1, PC2, fill=Donor, shape=Category)) +
   theme(panel.grid=element_blank()) +
   scale_fill_viridis_d(option="magma") +
   scale_shape_manual(values=c(21,22,23)) +
-  guides(fill = guide_legend(override.aes=list(shape=c(22)))) 
+  guides(fill = guide_legend(override.aes=list(shape=c(22)))) +
+  ggtitle(paste0(locus, "\n")) +
+  theme(plot.title = element_text(hjust=0.5, size=16, face="bold")) 
 
 ggsave(paste0("outputs/206/",locus,"-pca.pdf"))
 
@@ -97,10 +100,12 @@ results$Gene<-rownames(resOrdered)
 results<-results %>% relocate(Gene) %>% filter(padj<0.05, abs(log2FoldChange) >= 1) %>% mutate(Locus=paste0(locus))
 
 write_csv(results, paste0("outputs/206/",locus,"-results.csv"))
+color<-ifelse(locus=="AAVS1", "grey",
+       ifelse(locus %in% c("Dep.3","Ap.102"), "red","blue"))
 
 ggplot() +
   geom_point(data=results %>% filter(padj < 0.01), aes(x=log2FoldChange, y=-log10(padj)),
-             color="red", alpha=0.9) +
+             color=color, alpha=0.9) +
   geom_point(data=results %>% filter(padj >= 0.01), aes(x=log2FoldChange, y=-log10(padj)),
              color="black", alpha=0.9) +
   xlab("log2 (Fold Change)") +
@@ -109,18 +114,41 @@ ggplot() +
   ggtitle(paste0(locus, "\n")) +
   theme(plot.title = element_text(hjust=0.5, size=16, face="bold")) +
   theme(axis.title = element_text(face="bold")) +
-  xlim(-10,10) +
+  xlim(-12,12) +
   ylim(0,70)
 
 ggsave(paste0("outputs/206/",locus,"-volcano.jpeg"), width=5, height=4)
-  
-}
 
+# Heatmap of DE genes
+# need normalized counts
+ntd <- normTransform(dds)
+assay<-assay(ntd)
+norm<-counts(dds,normalized=TRUE)
+res<-norm[rownames(norm) %in% results$Gene,]
+
+ddf <- as.data.frame(colData(dds)[,c("Category","Donor")])
+
+pdf(paste0("outputs/206/",locus,"-heatmap.pdf"), width=8, height=10)
+
+pheatmap(assay[rownames(assay) %in% rownames(res),], cluster_rows=TRUE, show_rownames=FALSE,
+         cluster_cols=TRUE, annotation_col=ddf)
+
+dev.off()
+
+pdf(paste0("outputs/206/",locus,"-ward-heatmap.pdf"), width=8, height=10)
+
+pheatmap(assay[rownames(assay) %in% rownames(res),], cluster_rows=TRUE, show_rownames=FALSE,
+         cluster_cols=TRUE, annotation_col=ddf,
+         clustering_distance_cols = "ward.d2",
+         clustering_distance_rows = "ward.d2")
+
+dev.off()
+
+}
 ```
 
 ```{r}
 lapply(locus, Tester, meta, dat)
-
 ```
 
 ## Summarize 
@@ -132,6 +160,45 @@ resf<-lapply(resfiles,read_csv) %>% bind_rows()
 ```
 
 ```{r}
-resf %>% mutate(Direction=ifelse(log2FoldChange < 0, "Negative", "Positive") %>% group_by(Locus, Direction) %>%
+sum<-resf %>% mutate(Direction=ifelse(log2FoldChange < 0, "Negative", "Positive")) %>% group_by(Locus, Direction) %>%
                   summarize(Count=n())
+sum<-sum %>% mutate(Number=ifelse(Direction=="Positive",Count,-1*Count))
+sum
+```
+
+Make barplot of this.
+Add consistently DE genes to the plot, in a stacked fashion
+
+```{r}
+universal<-resf %>% mutate(Direction=ifelse(log2FoldChange < 0, "Negative", "Positive")) %>% group_by(Gene) %>% mutate(Occurrence=n()) %>% filter(Occurrence == 6) %>% select(Gene, Direction, Occurrence) %>% unique()
+
+unis<-universal %>% group_by(Direction) %>% summarize(Consistent=n()) %>%
+  mutate(Consistent=ifelse(Direction=="Positive",Consistent, -1*Consistent))
+write_csv(universal, file="outputs/206/genes-found-across-comparisions.csv")
+```
+
+
+```{r}
+sum2<-sum %>% left_join(unis) 
+sum2<-sum2 %>% left_join(meta)
+sum2$Locus<-factor(sum2$Locus, levels=c("AAVS1","Ap.102","Dep.3","Dep.2","Dep.55","Prot.218"))
+sum2<-mutate(sum2,Fill=ifelse(Locus=="AAVS1", "grey",
+       ifelse(Locus %in% c("Dep.3","Ap.102"), "red","blue")))
+```
+
+```{r}
+ggplot(sum2) +
+  geom_bar(aes(x=Locus,y=Number), fill=sum2$Fill, stat='identity', alpha=0.6, 
+           width=0.8) +
+  geom_bar(aes(x=Locus,y=Consistent), fill=sum2$Fill, stat='identity', alpha=0.8, 
+           width=0.8) +
+  scale_fill_viridis_d(option="H") +
+  theme_bw() +
+  theme(panel.grid = element_blank()) +
+  ylab("Number DE Genes\n") +
+  xlab("\nLocus") +
+  theme(axis.title = element_text(face = "bold"))+
+  theme(legend.position = "none") +
+  ylim(-1500,1500) 
+ggsave("outputs/206/de-genes.jpeg", width=5, height=5)
 ```

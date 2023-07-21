@@ -1,0 +1,80 @@
+---
+title: "209-tpm"
+output: html_document
+date: "2023-07-20"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
+```
+
+```{r}
+library(tidyverse)
+library(ggrepel)
+library(viridis)
+```
+
+Organize tpm data from sequencing efforts
+
+ENPP1/BCAS1 TPM need to get
+
+```{r}
+meta<-read_csv("meta/rna-seq-meta.csv")
+meta
+```
+
+
+```{r}
+counts<-read_csv("data/TPM_values-AAVS1-KIF6.csv") %>% 
+  select(ID, Control.1, KIF6.1, AAVS1.1, AAVS1.2)
+#transpose
+t<-t(counts %>% select(-ID))
+colnames(t)<-counts$ID
+pca<-prcomp(t)
+
+x<-as_tibble(pca$x)
+x$Sample<-rownames(pca$x) 
+
+#get eigenvalues
+eigen<-pca$sdev^2
+eigen <- tibble(PC = factor(1:length(eigen)), 
+                         variance = eigen) %>% 
+  mutate(PercentVariance = variance/sum(variance)*100) %>% 
+  mutate(Cumulatative = cumsum(PercentVariance))
+
+eigen
+```
+
+Join to meta   
+```{r}
+x<-x %>% left_join(meta)
+x
+```
+```{r}
+ggplot(x, aes(x=PC1, y=PC2)) +
+  geom_point(aes(fill=Category, shape=Donor)) +
+  geom_text_repel(aes(label=Sample)) +
+  theme_bw() +
+  theme(panel.grid=element_blank()) +
+  scale_shape_manual(values=c(21,23)) +
+  guides(fill = guide_legend(override.aes=list(shape=c(22)))) 
+
+```
+
+
+Plot KIF6   
+
+```{r}
+df<-read_csv("data/TPM_values-AAVS1-KIF6.csv") %>% relocate(Gene.name) %>% pivot_longer(3:8, names_to = "Sample", values_to = "TPM") %>%
+  left_join(meta) %>% select(-Seqfile1, -Seqfile2)
+df<-df %>% group_by(Gene.name, Locus) %>% mutate(MeanTPM=mean(TPM))
+```
+
+```{r}
+ddf<-df %>% filter(Gene.name=="KIF6") %>% filter(Locus %in% c("Dep.2","Control"))
+ggplot(ddf) +
+  geom_point(aes(x=Gene.name, y=TPM, shape=Donor, fill=Locus), cex=4)+
+  scale_shape_manual(values=c(21,23)) +
+  guides(fill = guide_legend(override.aes=list(shape=c(22)))) +
+  scale_fill_viridis_d(option="H")
+```

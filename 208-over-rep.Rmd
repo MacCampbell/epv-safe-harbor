@@ -1,0 +1,101 @@
+---
+title: "208-over-rep"
+output: html_document
+date: "2023-07-06"
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
+```
+
+```{r}
+library("tidyverse")
+library("clusterProfiler")
+library("ggupset")
+library("msigdbr")
+library("org.Hs.eg.db")
+library("magrittr")
+```
+    
+
+#Need a list of genes and a list of background genes    
+```{r}
+up<-read_csv("outputs/206/genes-found-across-comparisions.csv") %>% filter(Direction=="Positive")
+down<-read_csv("outputs/206/genes-found-across-comparisions.csv") %>% filter(Direction=="Negative")
+```
+
+
+```{r}
+hs_msigdb_df <- msigdbr(species = "Homo sapiens")
+# Filter the human data frame to the KEGG pathways that are included in the
+# curated gene sets
+hs_kegg_df <- hs_msigdb_df %>%
+  dplyr::filter(
+    gs_cat == "C2", # This is to filter only to the C2 curated gene sets
+    gs_subcat == "CP:KEGG" # This is because we only want KEGG pathways
+  )
+```
+  
+setting up background set with rowsums >= 10 as in DE analysis
+```{r}
+interest<-up$Gene
+backgroundset <- read_csv("data/raw_counts-intronic-intergenic.csv") %>% 
+  dplyr::select(-Gene.name) %>% mutate(Sum=rowSums(across(where(is.numeric)))) %>%
+  filter(Sum >= 10)
+```
+
+```{r}
+kegg_ora_results <- enricher(
+  gene = interest, # A vector of your genes of interest
+  pvalueCutoff = 0.1, # Can choose a FDR cutoff
+  pAdjustMethod = "BH", # Method to be used for multiple testing correction
+  universe = backgroundset$ID, # A vector containing your background set genes
+  # The pathway information should be a data frame with a term name or
+  # identifier and the gene identifiers
+  TERM2GENE = dplyr::select(
+    hs_kegg_df,
+    gs_name,
+    human_ensembl_gene
+  )
+)
+kegg_ora_results$Description
+
+```
+
+```{r}
+kegg_ora_results_down <- enricher(
+  gene = down$Gene, # A vector of your genes of interest
+  pvalueCutoff = 0.1, # Can choose a FDR cutoff
+  pAdjustMethod = "BH", # Method to be used for multiple testing correction
+  universe = backgroundset$ID, # A vector containing your background set genes
+  # The pathway information should be a data frame with a term name or
+  # identifier and the gene identifiers
+  TERM2GENE = dplyr::select(
+    hs_kegg_df,
+    gs_name,
+    human_ensembl_gene
+  )
+)
+kegg_ora_results_down$Description
+```
+
+Down are Control
+ $ ID         : chr  "KEGG_ASTHMA" "KEGG_INTESTINAL_IMMUNE_NETWORK_FOR_IGA_PRODUCTION" "KEGG_GRAFT_VERSUS_HOST_DISEASE" "KEGG_HEMATOPOIETIC_CELL_LINEAGE" ...
+ $ Description: chr  "KEGG_ASTHMA" "KEGG_INTESTINAL_IMMUNE_NETWORK_FOR_IGA_PRODUCTION" "KEGG_GRAFT_VERSUS_HOST_DISEASE" "KEGG_HEMATOPOIETIC_CELL_LINEAGE" ..
+ 
+ This is interesting... Making plots     
+ 
+```{r}
+enrich_plot <- enrichplot::dotplot(kegg_ora_results_down)
+
+enrich_plot
+```
+     
+     
+```{r}
+upset_plot <- enrichplot::upsetplot(kegg_ora_results_down)
+upset_plot
+```
+
+

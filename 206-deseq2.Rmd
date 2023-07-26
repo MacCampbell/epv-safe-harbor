@@ -40,7 +40,7 @@ coldata<-meta %>% filter(Locus==locus) %>% select(Sample, Category, Donor, Locus
 coldata2<-meta %>% filter(Category=="Control") %>% filter(Donor %in% coldata$Donor) %>% select(Sample, Category, Donor, Locus)
 
 m<-bind_rows(coldata,coldata2)
-m$Category <- factor(m$Category, levels=c("Control","Experiment"))
+m$Category <- factor(m$Category, levels=c("Control","Edited"))
 m$Donor <- factor(m$Donor)
 m<-as.data.frame(m)
 rownames(m)<-m$Sample
@@ -134,6 +134,7 @@ pheatmap(assay[rownames(assay) %in% rownames(res),], cluster_rows=TRUE, show_row
          cluster_cols=TRUE, annotation_col=ddf)
 
 dev.off()
+
 
 }
 ```

@@ -165,7 +165,7 @@ rename<-rename %>% left_join(namesdf)
 #locus<-c("AAVS1","Dep.2","Dep.55","Prot.218","Dep.3","Ap.102")
 
   if (locus=="AAVS1") {
-  order<-c("Control.1","KIF6.1","AAVS1.2","AAVS1.1")
+  order<-c("Control.1","KIF6.1","AAVS1.1","AAVS1.2")
 } else if (locus=="Dep.2") {
   order<-c("Control.1","KIF6.1","Control.2","KIF6.2")
 } else if (locus=="Dep.55") {
@@ -195,7 +195,7 @@ dev.off()
 
 
 ## Here is for trialling data
-```{r}
+```{r, eval=FALSE}
 locus<-c("Dep.2")
 ntd <- normTransform(dds)
 assay<-assay(ntd)
@@ -233,8 +233,7 @@ rename<-rename %>% left_join(namesdf)
 
 matrix<-rename %>% select(-ID, -Gene.name)  %>% relocate(all_of(order)) %>% as.matrix()
 rownames(matrix) <- rename$Gene.name
-```
-```{r}
+
 pheatmap(matrix, 
          cluster_rows=TRUE, show_rownames=TRUE,
          cluster_cols=FALSE, show_colnames=FALSE, annotation_col=ddf,

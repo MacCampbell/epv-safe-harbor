@@ -3,6 +3,8 @@ Characterizing EPV loci as safe harbors
 
 # Directories
 
+/data/ - contains TPM and raw counts files from RNAseq experiments         
+
 /meta/ 
 /meta/rna-seq-meta.csv - contains the metadata for each sample
 

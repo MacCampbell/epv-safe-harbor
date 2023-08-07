@@ -1,7 +1,7 @@
 ---
 title: "Figure-2"
 author: "Mac Campbell"
-date: "6/30/2021"
+date: "08/07/2023"
 output: html_document
 ---
 
@@ -15,7 +15,7 @@ library(tidyverse)
 
 ## Dotplots
 
-Prep the same way as Figure 1.
+Prep the same way as Figure 1a.
 
 ```{r}
 data<-read_csv("meta/full-table.csv") %>% 
@@ -38,13 +38,13 @@ dotplot<-bind_rows(inter,intron) %>% filter(Confidence != "NA") %>% mutate(LogTr
 ```
 
 
-
+"using open circles (intronic) and black filled circles (intergenic) for this figure."   
 
 ```{r}
 ggplot(dotplot, aes(x=LogTransformed, fill=Type)) + 
   #geom_vline(aes(xintercept=3), alpha=0.5, linetype="dotdash") +
   geom_dotplot(binwidth = .25, alpha=0.9, dotsize=2) +
-  scale_fill_manual(values = c("darkblue","darkgreen"), labels=c(paste0("Intergenic (n=",nrow(inter),")"),
+  scale_fill_manual(values = c("black","white"), labels=c(paste0("Intergenic (n=",nrow(inter),")"),
                                                                  paste0("Intronic (n=",  nrow(intron),")"))) +
   xlab("\nlog10 Nucleotide Precision of Homology") +
   theme_bw() +
@@ -58,10 +58,10 @@ ggplot(dotplot, aes(x=LogTransformed, fill=Type)) +
   coord_fixed(ratio=2.5) +
   ylim(0,1.5) +
   #theme(panel.grid=element_blank()) +
-  theme(legend.position = "none") +
+  #theme(legend.position = "none") +
   theme(strip.text = element_text(size = 12))
 
-ggsave("outputs/figures/figure-1b.pdf")
+ggsave("homology-plots/figure-1b.pdf")
 ``` 
 
 Age & Precision

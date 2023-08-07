@@ -1,0 +1,80 @@
+---
+title: "Figure-1b"
+author: "Mac Campbell"
+date: "08/07/2023"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
+```
+
+```{r}
+library(tidyverse)
+```
+
+## Dotplots
+
+Prep the same way as Figure 1a.
+
+```{r}
+data<-read_csv("meta/full-table.csv") %>% 
+  filter(HumanCoords !="NA") %>%
+  separate(HumanCoords, into = c("Chrom","Start","Stop")) 
+data$Start<-as.numeric(data$Start)
+data$Stop <-as.numeric(data$Stop)
+
+data<-data %>%  mutate(Confidence=abs(Stop-Start))
+
+intronic<-data %>% filter(Type=="Intronic") 
+intergenic<-data %>% filter(Type=="Intergenic") 
+
+# Combine and log transform
+
+inter<-intergenic %>% select(EVE, Chromosome, Confidence, VirusGenus, Type, `Divergence Time From Humans`) %>% filter(Confidence != "NA")
+intron<-intronic %>% select(EVE, Chromosome, Confidence, VirusGenus, Type, `Divergence Time From Humans`) %>% filter(Confidence != "NA")
+
+dotplot<-bind_rows(inter,intron) %>% filter(Confidence != "NA") %>% mutate(LogTransformed=log10(Confidence))
+```
+
+
+"using open circles (intronic) and black filled circles (intergenic) for this figure."   
+
+```{r}
+ggplot(dotplot, aes(x=LogTransformed, fill=Type)) + 
+  #geom_vline(aes(xintercept=3), alpha=0.5, linetype="dotdash") +
+  geom_dotplot(binwidth = .25, alpha=0.9, dotsize=2) +
+  scale_fill_manual(values = c("black","white"), labels=c(paste0("Intergenic (n=",nrow(inter),")"),
+                                                                 paste0("Intronic (n=",  nrow(intron),")"))) +
+  xlab("\nlog10 Nucleotide Precision of Homology") +
+  theme_bw() +
+  ylab("Count\n") +
+  theme(axis.ticks.y = element_blank(), axis.text.y=element_blank()) +
+  theme(axis.text = element_text(size=12, face="bold")) +
+  theme(axis.title = element_text(size=16, face="bold")) +
+  theme(legend.title.align = 0.5, legend.title = element_text(size=16),
+        legend.text=element_text(size=14)) +
+  facet_wrap(.~VirusGenus) +
+  coord_fixed(ratio=2.5) +
+  ylim(0,1.5) +
+  #theme(panel.grid=element_blank()) +
+  #theme(legend.position = "none") +
+  theme(strip.text = element_text(size = 12))
+
+ggsave("homology-plots/figure-1b.pdf")
+``` 
+
+Age & Precision
+
+```{r}
+ggplot(dotplot, aes(x=`Divergence Time From Humans`, y=LogTransformed)) +
+  geom_density_2d_filled(alpha=0.7) +
+  geom_point(pch=21, fill="yellow") 
+```
+Appears to saturate.      
+
+Summarize.    
+
+```{r}
+dotplot %>% group_by(VirusGenus) %>% mutate(MeanConfidence=mean(Confidence), Mean=mean(LogTransformed), Count=n()) %>% select(VirusGenus, MeanConfidence, Mean, Count) %>% unique()
+```

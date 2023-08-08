@@ -38,14 +38,14 @@ length(na.omit(data$MinAge))
 ```{r}
 intronic<-data %>% filter(Type=="Intronic") %>% mutate(Y=.95)
 bed1<-intronic %>% select(Chromosome,Start,Stop,Protein1) %>% rename(Label=Protein1) %>%
-  mutate(Color="darkgreen") %>% mutate(Y=.95)
+  mutate(Color="blue") %>% mutate(Y=.95)
 
 intronicAge <- filter(intronic, MinAge !="NA")
 
 intergenic<-data %>% filter(Type=="Intergenic")  %>% mutate(Y=.95)
 bed2<-intergenic %>% select(Chromosome, Start, Stop, Protein1, Protein2) %>%
   mutate(Label=paste0(Protein1, "\n", Protein2)) %>% select(-Protein1, -Protein2) %>%
-  mutate(Color="darkblue") %>% mutate(Y=.95)
+  mutate(Color="red") %>% mutate(Y=.95)
 
 intergenicAge <- filter(intergenic, MinAge !="NA")
 beds<-bind_rows(bed1,bed2) %>% rename(End=Stop)
@@ -72,8 +72,8 @@ circos.initializeWithIdeogram(plotType = c("labels", "axis"), species = "hg38",
 
 #Add a label
 text(0, 0.1, "EVE Insertion Sites", cex = 1)
-text(0, 0, paste0("Number Intergenic"," = ",nrow(intergenic)), cex=0.75, col="darkblue")
-text(0, -0.06, paste0("Number Intronic"," = ",nrow(intronic)), cex=0.75, col="darkgreen")
+text(0, 0, paste0("Number Intergenic"," = ",nrow(intergenic)), cex=0.75, col="red")
+text(0, -0.06, paste0("Number Intronic"," = ",nrow(intronic)), cex=0.75, col="blue")
 
 #Add cytobanding
 circos.genomicIdeogram(track.height = .05)
@@ -108,10 +108,10 @@ circos.track(ylim = c(0, max(na.omit(data$`Divergence Time From Humans`))), pane
 #circos.trackPoints(intergenicAge$Chromosome, intergenicAge$Start, intergenicAge$Age, col="darkblue", pch=16, cex=0.5)
 #circos.yaxis(side="right", labels.cex=0.5, at=c(0,25,50,75, 100))
 
-circos.trackPoints(intronicAge$Chromosome, intronicAge$Start, max(na.omit(data$`Divergence Time From Humans`))-intronicAge$`Divergence Time From Humans`, bg=alpha("white", 0.75),
+circos.trackPoints(intronicAge$Chromosome, intronicAge$Start, max(na.omit(data$`Divergence Time From Humans`))-intronicAge$`Divergence Time From Humans`, bg=alpha("blue", 0.75),
                    col=alpha("black", 0.75), pch=21, cex=0.75)
 
-circos.trackPoints(intergenicAge$Chromosome, intergenicAge$Start, max(na.omit(data$`Divergence Time From Humans`))-intergenicAge$`Divergence Time From Humans`, bg=alpha("black", 0.75),
+circos.trackPoints(intergenicAge$Chromosome, intergenicAge$Start, max(na.omit(data$`Divergence Time From Humans`))-intergenicAge$`Divergence Time From Humans`, bg=alpha("red", 0.75),
                    col=alpha("black", 0.75), pch=21, cex=0.75)
 circos.yaxis(side="right", labels.cex=0.5, at=c(0,100,200,300), labels=c(300,200,100,0))
 

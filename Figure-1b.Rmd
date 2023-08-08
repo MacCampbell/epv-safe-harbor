@@ -44,7 +44,7 @@ dotplot<-bind_rows(inter,intron) %>% filter(Confidence != "NA") %>% mutate(LogTr
 ggplot(dotplot, aes(x=LogTransformed, fill=Type)) + 
   #geom_vline(aes(xintercept=3), alpha=0.5, linetype="dotdash") +
   geom_dotplot(binwidth = .25, alpha=0.9, dotsize=2) +
-  scale_fill_manual(values = c("black","white"), labels=c(paste0("Intergenic (n=",nrow(inter),")"),
+  scale_fill_manual(values = c("red","blue"), labels=c(paste0("Intergenic (n=",nrow(inter),")"),
                                                                  paste0("Intronic (n=",  nrow(intron),")"))) +
   xlab("\nlog10 Nucleotide Precision of Homology") +
   theme_bw() +

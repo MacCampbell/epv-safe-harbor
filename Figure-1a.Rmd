@@ -21,18 +21,27 @@ Getting data including divergence time from humans.
 
 Note on 06302021 - those loci that are evaluated as GSHs perhaps could be labeled and shaped differently on the inside track.
 
-Not on August, 7 2023. Redoing with black color scheme.  "open circles (intronic) and black filled circles (intergenic)"   
+Note on August, 7 2023. Redoing with black color scheme.  "open circles (intronic) and black filled circles (intergenic)"   
+Note on August 11, adding in minAge as NA to 0. Also including minium age to humans as necessary
 
 ```{r}
-data<-read_csv("meta/full-table.csv") %>% 
+data<-read_csv("meta/full-table-08112023.csv") %>% 
   filter(HumanCoords !="NA") %>%
   separate(HumanCoords, into = c("Chrom","Start","Stop")) 
 data$Start<-as.numeric(data$Start)
 data$Stop <-as.numeric(data$Stop)
 
 data<-data %>%  mutate(Confidence=abs(Stop-Start))
+data$MinAge
 
 length(na.omit(data$MinAge))
+data$MinAge<-replace_na(data$MinAge, 0)
+data$MinAge
+length(na.omit(data$MinAge))
+
+length(na.omit(data$`Divergence Time From Humans`))
+data$`Divergence Time From Humans`<- round(data$`Divergence Time From Humans`,0)
+data$`Divergence Time From Humans`
 ```
 
 ```{r}
@@ -78,6 +87,15 @@ text(0, -0.06, paste0("Number Intronic"," = ",nrow(intronic)), cex=0.75, col="bl
 #Add cytobanding
 circos.genomicIdeogram(track.height = .05)
 
+#Blank track
+circos.track(ylim = c(0, 1), panel.fun = function(x, y) {
+  chr = CELL_META$sector.index
+  xlim = CELL_META$xlim
+  ylim = CELL_META$ylim
+#  circos.rect(xlim[1], 0, xlim[2], 1, col = "white")
+}, track.height = 0.05, bg.border = NA)
+
+
 ## Commenting out on 8/7/2023
 ##Blank track
 #circos.track(ylim = c(0, 1), panel.fun = function(x, y) {
@@ -101,19 +119,20 @@ circos.track(ylim = c(0, max(na.omit(data$`Divergence Time From Humans`))), pane
   chr = CELL_META$sector.index
   xlim = CELL_META$xlim
   ylim = CELL_META$ylim
-  circos.rect(xlim[1], 0, xlim[2], max(na.omit(data$`Divergence Time From Humans`)), col = "white")
-}, track.height = 0.175, bg.border = NA)
+#  circos.rect(xlim[1], 0, xlim[2], max(na.omit(data$`Divergence Time From Humans`)), col = "white")
+  circos.rect(xlim[1], 0, xlim[2], 350, col = "white")
+}, track.height = 0.3, bg.border = NA)
 
 #circos.trackPoints(intronicAge$Chromosome, intronicAge$Start, intronicAge$Age, col="darkgreen", pch=16, cex=0.5)
 #circos.trackPoints(intergenicAge$Chromosome, intergenicAge$Start, intergenicAge$Age, col="darkblue", pch=16, cex=0.5)
 #circos.yaxis(side="right", labels.cex=0.5, at=c(0,25,50,75, 100))
 
 circos.trackPoints(intronicAge$Chromosome, intronicAge$Start, max(na.omit(data$`Divergence Time From Humans`))-intronicAge$`Divergence Time From Humans`, bg=alpha("blue", 0.75),
-                   col=alpha("black", 0.75), pch=21, cex=0.75)
+                   col=alpha("black", 0.75), pch=21, cex=0.85)
 
 circos.trackPoints(intergenicAge$Chromosome, intergenicAge$Start, max(na.omit(data$`Divergence Time From Humans`))-intergenicAge$`Divergence Time From Humans`, bg=alpha("red", 0.75),
-                   col=alpha("black", 0.75), pch=21, cex=0.75)
-circos.yaxis(side="right", labels.cex=0.5, at=c(0,100,200,300), labels=c(300,200,100,0))
+                   col=alpha("black", 0.75), pch=21, cex=0.85)
+circos.yaxis(side="right", labels.cex=0.5, at=c(0,100,200,300), labels=c(350,250,150,50))
 
 #Including gene labels
 # Commented out 05032021 by MAC

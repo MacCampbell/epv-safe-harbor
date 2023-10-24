@@ -63,7 +63,7 @@ working  command
 srun -p high -t 10:00:00 --ntasks=8 --cpus-per-task=1 --mem-per-cpu=50G parallel -j 8 < diamond-commands.txt
 
 ```{r}
-meta<-read_tsv("meta/rna-seq-meta.csv")
+meta<-read_csv("meta/rna-seq-meta.csv")
 new<-meta %>% filter(Donor %in% c("Donor.5","Donor.6","Donor.7"))
 ```
 
@@ -131,4 +131,16 @@ PVT-2-diamond
 93
 PVT-3-diamond
 30
+
+
+Let's compare NUP vs PVT for potential chimeras
+
+cat NUP-1-diamond.tsv | grep Mammalian  | awk '{ if ($4 > 20 && $4<44 && $3 > 99) { print } }'
+
+Let's look at this hit
+A01587:359:GW2304013021st:1:1123:28682:18223	Mammalian	100	21	0	0	3	65	219	239	4.93e-11	44.3
+
+```{r}
+
+```
 

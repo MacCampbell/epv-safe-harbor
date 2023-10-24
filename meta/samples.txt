@@ -1,5 +1,5 @@
-Control-1
-Control-2
+Control_1
+Control_2
 NUP1
 NUP2
 PVT1

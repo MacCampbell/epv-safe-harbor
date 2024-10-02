@@ -1,0 +1,19 @@
+Sample,Category,Donor,Locus,Type,Counts,Seqfile1,Seqfile2,Location,Project,NCBI Sample Name
+AAVS1.2,Edited,Donor.2,AAVS1,Intronic,35932994,AAVS1-2_R1_001.fastq.gz,AAVS1-2_R2_001.fastq.gz,data/donors-1-2,Azenta_30-621707104,AAVS1-Donor.2
+AAVS1.1,Edited,Donor.1,AAVS1,Intronic,75562995,AAVS1-1_R1_001.fastq.gz,AAVS1-1_R2_001.fastq.gz,data/donors-1-2,Azenta_30-621707104,AAVS1-Donor.1
+Control.2,Edited,Donor.1,Dep.2,Intronic,65328801,Control-1_R1_001.fastq.gz,Control-1_R2_001.fastq.gz,data/donors-1-2,Azenta_30-621707104,Dep.2-Donor.1
+Control.1,Control,Donor.1,Control,Control,63066203,Control-2_R1_001.fastq.gz,Control-2_R2_001.fastq.gz,data/donors-1-2,Azenta_30-621707104,Control-Donor.1
+KIF6.2,Edited,Donor.2,Dep.2,Intronic,62572838,KIF6-2_R1_001.fastq.gz,KIF6-2_R2_001.fastq.gz,data/donors-1-2,Azenta_30-621707104,Dep.2-Donor.2
+KIF6.1,Control,Donor.2,Control,Control,72729230,KIF6-1_R1_001.fastq.gz,KIF6-1_R2_001.fastq.gz,data/donors-1-2,Azenta_30-621707104,Control-Donor.2
+BCAS1,Edited,Donor.3,Dep.55,Intronic,26572947,BCAS1_R1_001.fastq.gz,BCAS1_R2_001.fastq.gz,data/donors-3-4,,Dep.55-Donor.3
+BCAS2,Edited,Donor.4,Dep.55,Intronic,44604376,BCAS2_R1_001.fastq.gz,BCAS2_R2_001.fastq.gz,data/donors-3-4,,Dep.55-Donor.4
+Control1,Control,Donor.3,Control,Control,62747166,Control1_R1_001.fastq.gz,Control1_R2_001.fastq.gz,data/donors-3-4,,Control-Donor.3
+Control2,Control,Donor.4,Control,Control,55327964,Control2_R1_001.fastq.gz,Control2_R2_001.fastq.gz,data/donors-3-4,,Control-Donor.4
+ENPP1,Edited,Donor.3,Prot.218,Intronic,49671418,ENPP1_R1_001.fastq.gz,ENPP1_R2_001.fastq.gz,data/donors-3-4,,Prot.218-Donor.3
+ENPP2,Edited,Donor.4,Prot.218,Intronic,40399351,ENPP2_R1_001.fastq.gz,ENPP2_R2_001.fastq.gz,data/donors-3-4,,Prot.218-Donor.4
+Control-1,Control,Donor.5,Control,Control,44796679,Control_1_R1_001.fastq.gz,Control_1_R2_001.fastq.gz,data/donors-5-6,Azenta_30-884293166,Control-Donor.5
+Control-2,Control,Donor.6,Control,Control,46951276,Control_2_R1_001.fastq.gz,Control_2_R2_001.fastq.gz,data/donors-5-6,Azenta_30-884293166,Control-Donor.6
+NUP1,Edited,Donor.5,Dep.3,Intergenic,53052584,NUP1_R1_001.fastq.gz,NUP1_R2_001.fastq.gz,data/donors-5-6,Azenta_30-884293166,Dep.3-Donor.5
+NUP2,Edited,Donor.6,Dep.3,Intergenic,50174910,NUP2_R1_001.fastq.gz,NUP2_R2_001.fastq.gz,data/donors-5-6,Azenta_30-884293166,Dep.3-Donor.6
+PVT1,Edited,Donor.5,Ap.102,Intergenic,48919672,PVT1_R1_001.fastq.gz,PVT1_R2_001.fastq.gz,data/donors-5-6,Azenta_30-884293166,Ap.102-Donor.5
+PVT2,Edited,Donor.6,Ap.102,Intergenic,44870761,PVT2_R1_001.fastq.gz,PVT2_R2_001.fastq.gz,data/donors-5-6,Azenta_30-884293166,Ap.102-Donor.6

@@ -1,0 +1,477 @@
+---
+title: "300-new-reference"
+output: html_document
+date: "2024-09-05"
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
+```
+
+```{r}
+library(tidyverse)
+library(ggrepel)
+library(DESeq2)
+library(pheatmap)
+library(viridis)
+library(RColorBrewer)
+library(textshape)
+```
+
+# Get human genome
+Oh arghh, not linked to git.
+
+Pull down in ~/genomes.
+mkdir hg38
+
+
+wget https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/001/405/GCF_000001405.40_GRCh38.p14/GCF_000001405.40_GRCh38.p14_genomic.fna.gz
+
+wget https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/001/405/GCF_000001405.40_GRCh38.p14/GCF_000001405.40_GRCh38.p14_genomic.gtf.gz
+
+ensembl
+
+wget https://ftp.ensembl.org/pub/release-112/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna_sm.primary_assembly.fa.gz
+
+wget https://ftp.ensembl.org/pub/release-112/gtf/homo_sapiens/Homo_sapiens.GRCh38.112.chr.gtf.gz
+
+
+
+>GFP
+AGACCCTAATATGTCATCATTAGTGATTAAATGCCACTCCGAAAATACCGCCTAGAAATGTCTAAGATCGGTCCACTAAAGTTGTTTAAAACGACTGCTAAATCCGCGTGATAGGGGATTTGAAGTTTAATCTTCTATCGCAAGGAACTGCCGATCTTAATGGATGGCCGGAGGTGGTATGGAAGCTATAAGCGCGGGTGATGGTGAGCAAGGGCGAGGAGCTGTTCACCGGGGTGGTGCCCATCCTGGTCGAGCTGGACGGCGACGTAAACGGCCACAAGTTCAGCGTGTCCGGCGAGGGCGAGGGCGATGCCACCTACGGCAAGCTGACCCTGAAGTTCATCTGCACCACCGGCAAGCTGCCCGTGCCCTGGCCCACCCTCGTGACCACCCTGACCTACGGCGTGCAGTGCTTCAGCCGCTACCCCGACCACATGAAGCAGCACGACTTCTTCAAGTCCGCCATGCCCGAAGGCTACGTCCAGGAGCGCACCATCTTCTTCAAGGACGACGGCAACTACAAGACCCGCGCCGAGGTGAAGTTCGAGGGCGACACCCTGGTGAACCGCATCGAGCTGAAGGGCATCGACTTCAAGGAGGACGGCAACATCCTGGGGCACAAGCTGGAGTACAACTACAACAGCCACAACGTCTATATCATGGCCGACAAGCAGAAGAACGGCATCAAGGTGAACTTCAAGATCCGCCACAACATCGAGGACGGCAGCGTGCAGCTCGCCGACCACTACCAGCAGAACACCCCCATCGGCGACGGCCCCGTGCTGCTGCCCGACAACCACTACCTGAGCACCCAGTCCGCCCTGAGCAAAGACCCCAACGAGAAGCGCGATCACATGGTCCTGCTGGAGTTCGTGACCGCCGCCGGGATCACTCTCGGCATGGACGAGCTGTACAAGTAAAGAGGGTAATTAGGCGTGTTCACCTACGCTACGCTAACGGGCGATTCTATAAGATTGCACATTGCGTCAACTCATAAGATGTCTCAACGGCATGCGCAACTTGTGAAGTGTCTACTATCCTTAAACGCATATCTCGCACAGTAACTCCCGAATATGTCGGCATCTGATGTTGCCCGGGCCGAGTTAGTGTTGAGCTCACG
+
+1-200 - random DNA
+201-920 - GFP
+921-1121 - random DNA
+Example command:
+STAR --runThreadN 1 --runMode genomeGenerate --genomeDir $GENOMEDIR/STAR --genomeFastaFiles $GENOMEDIR/GRCh38.primary_assembly.genome.chr19.fa --sjdbGTFfile $GENOMEDIR/gencode.v29.primary_assembly.annotation.chr19.gtf
+
+STAR --runThreadN 4 \
+--runMode genomeGenerate \
+--genomeDir star_index \
+--genomeFastaFiles Arabidopsis_thaliana.TAIR10.dna.toplevel.fa \
+--sjdbGTFfile Arabidopsis_thaliana.TAIR10.39.gtf \
+--sjdbOverhang 99
+
+https://ucdavis-bioinformatics-training.github.io/2022-June-RNA-Seq-Analysis/data_reduction/02-alignment-indexref_mm
+
+ In general, for--sjdbGTFfile files STAR only processes lines which have--sjdbGTFfeatureExon (=exon by default) in the 3rd field (column). The exons are assigned to the transcripts using parent-child relationship defined by the--sjdbGTFtagExonParentTranscript (=transcript id by default) GTF/GFF attribute.
+## Making a dummy ref
+(base) maccamp@farm:~/epv-safe-harbor/data/dummy-ref$ touch dummy.gtf
+(base) maccamp@farm:~/epv-safe-harbor/data/dummy-ref$ touch dummy.fasta
+
+maccamp@farm:~/epv-safe-harbor/data/dummy-ref$ module load star
+
+STAR --runThreadN 4 \
+--runMode genomeGenerate \
+--genomeDir star_index \
+--genomeFastaFiles dummy.fasta \
+--sjdbGTFfile dummy.gtf 
+
+Seems to work.
+
+Build index... Can do the whole thing I suppose.
+`maccamp@farm:~/epv-safe-harbor/data/custom$ cat ~/genomes/hg38/Homo_sapiens.GRCh38.dna_sm.primary_assembly.fa ../dummy-ref/dummy.fasta > custom.fasta`
+`(base) maccamp@farm:~/epv-safe-harbor/data/custom$ cat ~/genomes/hg38/Homo_sapiens.GRCh38.112.chr.gtf ../dummy-ref/dummy.gtf > custom.gtf`
+
+
+screen -S index
+srun -p high -t 24:00:00 --mem=32G  failed oom
+
+```{sh, eval=FALSE}
+module load star
+srun -p bigmemm -t 24:00:00 --mem=256G --nodes=1 --ntasks-per-node=1 \
+--cpus-per-task=12 STAR --runThreadN 12 \
+--runMode genomeGenerate \
+--genomeDir star_index \
+--genomeFastaFiles custom.fasta \
+--sjdbGTFfile custom.gtf 
+
+```
+
+Took about 1.5 hrs
+
+working command for alignment (_1_ control matches NUP/PVT)
+```{sh}
+srun -p high -t 18:00:00 --mem=32G --nodes=1 --ntasks-per-node=1 \
+--cpus-per-task=4 STAR \
+      --runThreadN 4 \
+      --genomeDir data/custom/star_index \
+      --outSAMtype BAM SortedByCoordinate \
+      --readFilesCommand zcat \
+      --readFilesIn data/raw/Control_1_R1_0001.fastq.gz  data/raw/Control_1_R2_0001.fastq.gz  \
+      --quantMode GeneCounts \
+      --outFileNamePrefix outputs/300/Control_1 \
+      > outputs/300/Control_1-STAR.stdout 2> outputs/300/Control_1-STAR.stderr
+
+```
+
+STAR --runThreadN 4 --genomeDir data/custom/star_index --outSAMtype BAM SortedByCoordinate --readFilesCommand zcat --readFilesIn data/raw/Control_2_R1_0001.fastq.gz data/raw/Control_2_R2_0001.fastq.gz --quantMode GeneCounts --outFileNamePrefix outputs/300/Control-2  >outputs/300/Control-2-STAR.stdout 2> outputs/300/Control-2-STAR.stderr
+
+
+
+These are
+Control-1	Control	Donor.5	Control	Control
+Control-2	Control	Donor.6	Control	Control
+NUP1	Edited	Donor.5	Dep.3	Intergenic
+NUP2	Edited	Donor.6	Dep.3	Intergenic
+PVT1	Edited	Donor.5	Ap.102	Intergenic
+PVT2	Edited	Donor.6	Ap.102	Intergenic
+
+So yeah, we can luck and a couple of samples.
+
+Ughh, really want a batch job.    
+
+
+
+They all are running... They should only take about an hour. But it doesn't. The reference doesn't seem too complicated. May:
+1 seedPerWindowNmax is 50 by default can try 30
+2 incldue more threads? Trying this first.
+
+Star outformat https://ucdavis-bioinformatics-training.github.io/2022-June-RNA-Seq-Analysis/data_reduction/03-counts_mm
+
+
+
+## Basic DESeq2 analysis
+Dep.3-Ap.102
+
+New alignment:
+LFC > 0 (up)       : 24, 0.086%
+LFC < 0 (down)     : 63, 0.23%
+
+Data used in paper:
+LFC > 0 (up)       : 30, 0.11%
+LFC < 0 (down)     : 67, 0.24%
+
+
+```{r}
+meta<-read_csv("meta/rna-seq-meta-for-300.csv")
+meta
+```
+```{r}
+dat<-read_tsv("data/nup-pvt.cnts") %>%
+  relocate(ID) %>% dplyr::rename(gene_id=ID)
+
+#dat<-read_csv("data/raw_counts-intronic-intergenic.csv") %>% select(-Gene.name) %>%
+ # relocate(ID) %>% dplyr::rename(gene_id=ID)
+dat %>% filter(gene_id=="ENSG0000000000")
+```
+
+```{r}
+locus<-"Dep.3-Ap.102"
+
+coldata<-meta %>% filter(Locus==locus) %>% select(Sample, Category, Donor, Locus)
+m<-coldata
+m$Category <- factor(m$Category, levels=c("Edited1","Edited2"))
+m$Donor <- factor(m$Donor)
+m<-as.data.frame(m)
+rownames(m)<-m$Sample
+m<-m %>% select(-Sample)
+
+d<-select(dat, gene_id, rownames(m)) 
+d<-as.data.frame(d)
+rownames(d)<-d$gene_id
+d<-d %>% select(-gene_id)
+
+dds <- DESeqDataSetFromMatrix(countData = d,
+                              colData = m,
+                              design = ~Donor + Category )
+
+```
+
+
+```{r}
+#Drop low counts
+keep <- rowSums(counts(dds)) >= 10
+dds <- dds[keep,]
+
+#Create other data
+vsd <- vst(dds, blind=FALSE)
+ntd <- normTransform(dds)
+
+
+ntddata<-assay(ntd)
+vsddata<-assay(vsd)
+
+#PCA for fun 
+pcaData <- plotPCA(vsd, intgroup=c("Category", "Donor"), returnData=TRUE)
+percentVar <- round(100 * attr(pcaData, "percentVar"))
+
+ggplot(pcaData, aes(PC1, PC2, fill=Donor, shape=Category)) +
+  geom_point(size=3) +
+  xlab(paste0("PC1: ",percentVar[1],"% variance")) +
+  ylab(paste0("PC2: ",percentVar[2],"% variance")) + 
+  coord_fixed() +
+  theme_bw() +
+  theme(panel.grid=element_blank()) +
+  scale_fill_viridis_d(option="magma") +
+  scale_shape_manual(values=c(21,22,23)) +
+  guides(fill = guide_legend(override.aes=list(shape=c(22)))) +
+  ggtitle(paste0(locus, "\n")) +
+  theme(plot.title = element_text(hjust=0.5, size=16, face="bold")) 
+
+ggsave(paste0("outputs/300/",locus,"-pca.pdf"))
+```
+```{r}
+#DE testing
+
+dds <- DESeq(dds)
+res <- results(dds)
+
+resOrdered <- res[order(res$pvalue),]
+summary(res)
+
+results<-as_tibble(resOrdered)
+results$Gene<-rownames(resOrdered)
+results<-results %>% relocate(Gene) %>% filter(padj<0.05, abs(log2FoldChange) >= 1) %>% mutate(Locus=paste0(locus))
+
+write_csv(results, paste0("outputs/300/",locus,"-results.csv"))
+color<-ifelse(locus=="AAVS1", "grey",
+       ifelse(locus %in% c("Dep.3","Ap.102", "Dep.2-Ap.102"), "red","blue"))
+
+ggplot() +
+  geom_point(data=results %>% filter(padj < 0.01), aes(x=log2FoldChange, y=-log10(padj)),
+             color=color, alpha=0.9) +
+  geom_point(data=results %>% filter(padj >= 0.01), aes(x=log2FoldChange, y=-log10(padj)),
+             color="black", alpha=0.9) +
+  xlab("log2 (Fold Change)") +
+  theme_bw() +
+  theme(panel.grid = element_blank()) +
+  ggtitle(paste0(locus, "\n")) +
+  theme(plot.title = element_text(hjust=0.5, size=16, face="bold")) +
+  theme(axis.title = element_text(face="bold")) +
+  xlim(-12,12) +
+  ylim(0,70)
+
+ggsave(paste0("outputs/300/",locus,"-volcano.jpeg"), width=5, height=4)
+
+```
+
+```{r}
+results %>% filter(Gene=="ENSG0000000000")
+```
+
+# Heatmap of all DE genes
+# need normalized counts
+
+```{r}
+ntd <- normTransform(dds)
+assay<-assay(ntd)
+norm<-counts(dds,normalized=TRUE)
+res<-norm[rownames(norm) %in% results$Gene,]
+
+ddf <- as.data.frame(colData(dds)[,c("Category","Donor")])
+
+
+pdf(paste0("outputs/300/",locus,"-heatmap.pdf"), width=8, height=10)
+
+anno<-ifelse(locus=="AAVS1", "grey",
+       ifelse(locus %in% c("Dep.3","Ap.102", "Dep.3-Ap.102"), "red","blue"))
+
+annotate = list(
+  Category = c(Edited1="grey50", Edited2=paste0(anno)))
+
+pheatmap(assay[rownames(assay) %in% rownames(res),], cluster_rows=TRUE, show_rownames=FALSE,
+         cluster_cols=TRUE, annotation_col=ddf,
+         color=ramp, annotation_colors = annotate)
+
+dev.off()
+```
+
+
+## More alignments
+
+of Donors 1 & 2, note that one sample is swapped around.
+
+Sample	Category	Donor	Locus	Type
+AAVS1.2	Edited	Donor.2	AAVS1	Intronic
+AAVS1.1	Edited	Donor.1	AAVS1	Intronic
+Control.2	Edited	Donor.1	Dep.2	Intronic
+Control.1	Control	Donor.1	Control	Control
+KIF6.2	Edited	Donor.2	Dep.2	Intronic
+KIF6.1	Control	Donor.2	Control	Control
+
+Ack, the controls are screwed up!
+
+`~/epv-safe-harbor/data/donors-1-2`
+donors-1-2
+
+AAVS1-2_R1_001.fastq.gz	AAVS1-2_R2_001.fastq.gz
+AAVS1-1_R1_001.fastq.gz	AAVS1-1_R2_001.fastq.gz
+Control-1_R1_001.fastq.gz	Control-1_R2_001.fastq.gz
+Control-2_R1_001.fastq.gz	Control-2_R2_001.fastq.gz
+KIF6-2_R1_001.fastq.gz	KIF6-2_R2_001.fastq.gz
+KIF6-1_R1_001.fastq.gz	KIF6-1_R2_001.fastq.gz
+
+donors-3-4
+BCAS1_R1_001.fastq.gz	BCAS1_R2_001.fastq.gz
+BCAS2_R1_001.fastq.gz	BCAS2_R2_001.fastq.gz
+Control1_R1_001.fastq.gz	Control1_R2_001.fastq.gz
+Control2_R1_001.fastq.gz	Control2_R2_001.fastq.gz
+ENPP1_R1_001.fastq.gz	ENPP1_R2_001.fastq.gz
+ENPP2_R1_001.fastq.gz	ENPP2_R2_001.fastq.gz
+
+donors-5-6
+Control_1_R1_0001.fastq.gz	Control_1_R2_0001.fastq.gz
+Control_2_R1_0001.fastq.gz	Control_2_R2_0001.fastq.gz
+NUP1_R1_001.fastq.gz	NUP1_R2_001.fastq.gz
+NUP2_R1_001.fastq.gz	NUP2_R2_001.fastq.gz
+PVT1_R1_001.fastq.gz	PVT1_R2_001.fastq.gz
+PVT2_R1_001.fastq.gz	PVT2_R2_001.fastq.gz
+
+Redoing this:
+
+
+```{r}
+seqs<-read_csv("meta/rna-seq-meta-for-align.csv") 
+seqs %>% mutate(Command = paste0("srun -p med -t 72:00:00 --mem=32G --nodes=1 --ntasks-per-node=1 --cpus-per-task=8 STAR --runThreadN 8 --genomeDir data/custom/star_index --outSAMtype BAM SortedByCoordinate --readFilesCommand zcat --readFilesIn ",Location, "/",Seqfile1, " ",Location, "/",Seqfile2,
+                                  " --quantMode GeneCounts --outFileNamePrefix outputs/300/",`NCBI Sample Name`, "  >outputs/300/",`NCBI Sample Name`,"-STAR.stdout 2> outputs/300/",`NCBI Sample Name`,"-STAR.stderr &")) %>% select(Command) %>% write_tsv("300.3-commands.tsv")
+``` 
+
+Some of these did not finish.   
+
+-rw-rw-r-- 1 maccamp 1.5M Sep 23 17:17 AAVS1-Donor.2ReadsPerGene.out.tab
+-rw-rw-r-- 1 maccamp 1.5M Sep 23 17:17 Ap.102-Donor.5ReadsPerGene.out.tab
+-rw-rw-r-- 1 maccamp 1.5M Sep 23 17:17 Ap.102-Donor.6ReadsPerGene.out.tab
+-rw-rw-r-- 1 maccamp 1.5M Sep 23 17:17 Control-Donor.1ReadsPerGene.out.tab
+-rw-rw-r-- 1 maccamp 1.5M Sep 23 17:17 Control-Donor.2ReadsPerGene.out.tab
+-rw-rw-r-- 1 maccamp 1.5M Sep 23 17:17 Control-Donor.3ReadsPerGene.out.tab
+-rw-rw-r-- 1 maccamp 1.5M Sep 23 17:17 Control-Donor.4ReadsPerGene.out.tab
+-rw-rw-r-- 1 maccamp 1.5M Sep 23 17:17 Control-Donor.5ReadsPerGene.out.tab
+-rw-rw-r-- 1 maccamp 1.5M Sep 23 17:17 Control-Donor.6ReadsPerGene.out.tab
+-rw-rw-r-- 1 maccamp 1.5M Sep 23 17:17 Dep.2-Donor.1ReadsPerGene.out.tab
+-rw-rw-r-- 1 maccamp 1.5M Sep 23 17:17 Dep.2-Donor.2ReadsPerGene.out.tab
+-rw-rw-r-- 1 maccamp 1.5M Sep 23 17:17 Dep.3-Donor.5ReadsPerGene.out.tab
+-rw-rw-r-- 1 maccamp 1.5M Sep 23 17:17 Dep.3-Donor.6ReadsPerGene.out.tab
+-rw-rw-r-- 1 maccamp 1.5M Sep 23 17:17 Dep.55-Donor.3ReadsPerGene.out.tab
+-rw-rw-r-- 1 maccamp 1.5M Sep 23 17:17 Dep.55-Donor.4ReadsPerGene.out.tab
+-rw-rw-r-- 1 maccamp 1.5M Sep 23 17:17 Prot.218-Donor.3ReadsPerGene.out.tab
+
+Need  
+AVS1-Donor.1
+Prot.218-Donor.4
+
+Now, well need to combine the tabular files! in outputs/300
+
+(base) Macs-MacBook-Pro-2:300 mac$ ls | grep out.tab | perl -pe 's/ReadsPerGene.out.tab//'g > samples.txt
+mkdir temp
+for sample in `cat samples.txt`; do \
+    echo ${sample}
+    cat ${sample}ReadsPerGene.out.tab | tail -n +5 | cut -f4 >temp/${sample}.count
+done;
+
+cut -f 1 AAVS1-Donor.1ReadsPerGene.out.tab |  tail -n +5 > temp/gene-names.txt
+(base) Macs-MacBook-Pro-2:300 mac$ paste temp/gene-names.txt temp/*.count > temp/temp.temp
+(base) Macs-MacBook-Pro-2:300 mac$ cat <(paste -s samples.txt ) temp/temp.temp  > combined-counts.txt 
+
+```{r}
+dat2<-read_tsv("outputs/300/combined-counts.txt") %>%
+  relocate(ID) %>% dplyr::rename(gene_id=ID)
+dat<-dat2
+meta<-read_csv("meta/rna-seq-meta-for-align.csv")
+```
+
+```{r}
+coldata<-meta %>% select(`NCBI Sample Name`, Category, Donor, Locus)
+m<-coldata
+m$Category <- factor(m$Category, levels=c("Edited","Control"))
+m$Donor <- factor(m$Donor)
+m<-as.data.frame(m)
+rownames(m)<-m$`NCBI Sample Name`
+m<-m %>% select(-`NCBI Sample Name`)
+
+d<-select(dat, gene_id, rownames(m)) 
+d<-as.data.frame(d)
+rownames(d)<-d$gene_id
+d<-d %>% select(-gene_id)
+
+dds <- DESeqDataSetFromMatrix(countData = d,
+                              colData = m,
+                              design = ~Donor + Category )
+
+```
+
+
+```{r}
+#Drop low counts
+keep <- rowSums(counts(dds)) >= 50
+dds <- dds[keep,]
+
+#Create other data
+vsd <- vst(dds, blind=FALSE)
+ntd <- normTransform(dds)
+
+
+ntddata<-assay(ntd)
+vsddata<-assay(vsd)
+
+#PCA for fun 
+pcaData <- plotPCA(vsd, intgroup=c("Category", "Donor"), returnData=TRUE)
+percentVar <- round(100 * attr(pcaData, "percentVar"))
+
+ggplot(pcaData, aes(PC1, PC2, fill=Donor, shape=Category)) +
+  geom_point(size=3) +
+  xlab(paste0("PC1: ",percentVar[1],"% variance")) +
+  ylab(paste0("PC2: ",percentVar[2],"% variance")) + 
+  coord_fixed() +
+  theme_bw() +
+  theme(panel.grid=element_blank()) +
+  scale_fill_viridis_d(option="magma") +
+  scale_shape_manual(values=c(21,22,23)) +
+  guides(fill = guide_legend(override.aes=list(shape=c(22)))) +
+  theme(plot.title = element_text(hjust=0.5, size=16, face="bold")) +
+  facet_wrap(.~Donor)
+
+ggsave(paste0("outputs/300/all-seqs-pca.pdf"))
+```
+
+
+```{r}
+edited<-meta %>% filter(Category=="Edited") %>% select(`NCBI Sample Name`)
+
+v1<-rownames(vsddata %>% tail())
+v2<-vsddata %>% tail() %>% as_data_frame()
+v2$Gene<-v1
+v3<-v2 %>% relocate(Gene) %>% select(Gene, edited$`NCBI Sample Name`) %>% 
+  filter(Gene=="ENSG0000000000") %>% mutate(Transformation="Variance Stabilizing Transformation")
+  
+v3  
+v3 %>%  write_csv("outputs/300/varaince-stabilizing-transformation.csv")
+```
+
+```{r}
+n1<-rownames(ntddata %>% tail())
+n2<-ntddata %>% tail() %>% as_data_frame()
+n2$Gene<-n1
+n3<-n2 %>% relocate(Gene) %>% select(Gene, edited$`NCBI Sample Name`) %>% 
+  filter(Gene=="ENSG0000000000") %>%  mutate(Transformation="Normalized Counts Transformation")
+  
+n3 %>%  write_csv("outputs/300/normalized-counts-transformation.csv")
+```
+
+```{r}
+c1<-rownames(counts(dds) %>% tail)
+c2<-counts(dds) %>% tail() %>% as_data_frame()
+c2$Gene<-c1
+c3<-c2 %>% relocate(Gene) %>% select(Gene, edited$`NCBI Sample Name`) %>% 
+  filter(Gene=="ENSG0000000000") %>%  mutate(Transformation="Raw Counts")
+  
+c3 %>%  write_csv("outputs/300/raw-counts.csv")
+```
+
+```{r}
+ddsn<-estimateSizeFactors(dds)
+cn1<-rownames(counts(ddsn, normalized=TRUE) %>% tail())
+cn2<-counts(ddsn, normalized=TRUE) %>% tail() %>% as_data_frame()
+cn2$Gene<-cn1
+cn3<-cn2 %>% relocate(Gene) %>% select(Gene, edited$`NCBI Sample Name`) %>% 
+  filter(Gene=="ENSG0000000000") %>%  mutate(Transformation="Normalized")
+  
+cn3 %>%  write_csv("outputs/300/normalized-counts.csv")
+```
+
+```{r}
+ddf<-bind_rows(c3,cn3,n3,v3) %>% relocate(Gene, Transformation)
+ddf %>% write_csv("outputs/300/edited-counts.csv")
+```

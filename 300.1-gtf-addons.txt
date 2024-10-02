@@ -1,0 +1,10 @@
+In general, for--sjdbGTFfile files STAR only processes lines which have--sjdbGTFfeatureExon (=exon by default) in the 3rd field (column). The exons are assigned to the transcripts using parent-child relationship defined by the--sjdbGTFtagExonParentTranscript (=transcript id by default) GTF/GFF attribute.
+
+need gene, transcript and exon options populated.
+
+
+GFP	custom	gene	201	920	.	+	.	gene_id "ENSG0000000000"; gene_version "1"; gene_name "YangGFP"; gene_source "custom"; gene_biotype "protein_coding";
+
+GFP	custom	transcript	201	920	.	+	.	gene_id "ENSG0000000000"; gene_version "1"; gene_name "YangGFP"; transcript_id "ENST00000000000"; transcript_version "1"; gene_source "custom"; gene_biotype "protein_coding"; transcript_source "custom"; transcript_biotype "protein_coding"; tag "basic"; tag "Ensembl_canonical"; transcript_support_level "5";
+
+GFP	custom	exon	201	920	.	+	.	gene_id "ENSG0000000000"; gene_version "1"; gene_name "YangGFP"; transcript_id "ENST00000000000"; transcript_version "1"; exon_number "1"; gene_source "custom"; gene_biotype "protein_coding"; transcript_source "custom"; transcript_biotype "protein_coding"; exon_id "ENSE0000000000"; exon_version "1"; tag "basic"; tag "Ensembl_canonical"; transcript_support_level "5";

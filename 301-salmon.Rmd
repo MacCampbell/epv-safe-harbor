@@ -1,0 +1,59 @@
+---
+title: "301-salmon"
+output: html_document
+date: "2024-09-29"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
+```
+
+```{r}
+library(tidyverse)
+```
+
+Probably best to go and get the TPM counts with salmon
+
+Available module: salmon/1.10.1
+
+Retrieving hg38 transcripts into data/salmon
+
+https://ftp.ensembl.org/pub/release-112/fasta/homo_sapiens/cdna/Homo_sapiens.GRCh38.cdna.all.fa.gz
+gunzip Homo_sapiens.GRCh38.cdna.all.fa.gz
+cat Homo_sapiens.GRCh38.cdna.all.fa GFP.fasta  > human.fasta
+
+module load salmon
+
+
+srun -p high -t 4:00:00 --mem=32G --nodes=1 --ntasks-per-node=1 --cpus-per-task=8 salmon index -t human.fasta -i human_index
+
+#!/bin/bash
+for fn in data/DRR0161{25..40};
+do
+samp=`basename ${fn}`
+echo "Processing sample ${samp}"
+salmon quant -i athal_index -l A \
+         -1 ${fn}/${samp}_1.fastq.gz \
+         -2 ${fn}/${samp}_2.fastq.gz \
+         -p 8 --validateMappings -o quants/${samp}_quant
+done 
+
+```{sh, eval=FALSE}
+srun -p med -t 72:00:00 --mem=32G --nodes=1 --ntasks-per-node=1 --cpus-per-task=8 \
+salmon quant -i data/salmon/human_index -l A \
+-1 data/donors-1-2/AAVS1-1_R1_001.fastq.gz \
+-2 data/donors-1-2/AAVS1-1_R2_001.fastq.gz \
+-p 8 ==validateMappings -o outputs/301/AAVS1-Donor.1 
+```
+
+Working command!
+
+generate more commands:     
+
+```{r}
+seqs<-read_csv("meta/rna-seq-meta-for-align.csv") 
+seqs %>% mutate(Command = paste0("srun -p med -t 72:00:00 --mem=32G --nodes=1 --ntasks-per-node=1 --cpus-per-task=8 salmon quant -i data/salmon/human_index -l A -1 ",Location, "/",Seqfile1, " -2 ",Location, "/",Seqfile2,
+                                  " -p 8  ==validateMappings -o outputs/301/",`NCBI Sample Name`, " &")) %>% select(Command) %>% write_tsv("301.1-commands.tsv")
+```
+
+

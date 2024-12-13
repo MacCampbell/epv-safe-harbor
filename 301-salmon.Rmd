@@ -56,4 +56,22 @@ seqs %>% mutate(Command = paste0("srun -p med -t 72:00:00 --mem=32G --nodes=1 --
                                   " -p 8  ==validateMappings -o outputs/301/",`NCBI Sample Name`, " &")) %>% select(Command) %>% write_tsv("301.1-commands.tsv")
 ```
 
+seems to have worked! Have a bunch of quant.sf files
 
+ls > samples.txt
+mkdir temp
+for sample in `cat samples.txt`; do \
+    echo ${sample}
+    cat ${sample}/quant.sf | tail -n +1 | cut -f 4 >temp/${sample}.count
+done;
+cut -f 1 AAVS1-Donor.1/quant.sf |  tail -n +1 > temp/gene-names.txt
+paste temp/gene-names.txt temp/*.count > temp/temp.temp
+
+cat <(paste -s samples.txt ) temp/temp.temp  > combined-counts.txt 
+
+scp farm:~/epv-safe-harbor/outputs/301/combined-c* .
+
+```{r}
+df<-read_tsv("outputs/301/combined-counts.txt")
+df %>% filter(Gene=="ENSG0000000000") %>% write_csv("outputs/301/gsh-tpms.csv")
+```

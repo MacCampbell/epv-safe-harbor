@@ -1,0 +1,78 @@
+~/fastq-multx/fastq-multx -H -m0 -B barcodes.tsv \
+ Undetermined_S0_L001_R1_001.fastq.gz Undetermined_S0_L001_R2_001.fastq.gz \
+ -o %-R1.fastq.gz %-R2.fastq.gz
+
+Unedit_a	CCGCGGTT	CTAGCGCT
+Unedit_b	TTATAACC	TCGATATC
+AAVS1_a	GGACTTGG	CGTCTGCG
+AAVS1_b	AAGTCCAA	TACTCATA
+Dep1_a	ATCCACTG	ACGCACCT
+Dep1_b	GCTTGTCA	GTATGTTC
+Dep2_a	CAAGCTAG	CGCTATGT
+Dep2_b	TGGATCGA	TATCGCAC
+Dep3_a	AGTTCAGG	TCTGTTGG
+Dep3_b	GACCTGAA	CTCACCAA
+Ap102_a	TCTCTACT	GAACCGCG
+Ap102_b	CTCTCGTC	AGGTTATA
+Dep55_a	CCAAGTCT	TCATCCTT
+Dep55_b	TTGGACTC	CTGCTTCC
+
+(base) maccamp@farm:~/temp-basespace$ cat Undetermined\ from\ 241203_NS500730_0813_AHFCCMBGYW_L001_ds.896a98ff67bf44a78094b1849235e505/Undetermined_S0_L001_R1_001.fastq.gz Undetermined\ from\ 241203_NS500730_0813_AHFCCMBGYW_L002_ds.999ebc96f8a9406bbf4fcdbaeff09f43/Undetermined_S0_L002_R1_001.fastq.gz Undetermined\ from\ 241203_NS500730_0813_AHFCCMBGYW_L003_ds.42d1081ec1804589803ed3032b79756b/Undetermined_S0_L003_R1_001.fastq.gz Undetermined\ from\ 241203_NS500730_0813_AHFCCMBGYW_L004_ds.c04e921144a84eb1b1154dbabfdb7d03/Undetermined_S0_L004_R1_001.fastq.gz > combined-R1.fastq.gz
+
+cat Undetermined\ from\ 241203_NS500730_0813_AHFCCMBGYW_L001_ds.896a98ff67bf44a78094b1849235e505/Undetermined_S0_L001_R2_001.fastq.gz Undetermined\ from\ 241203_NS500730_0813_AHFCCMBGYW_L002_ds.999ebc96f8a9406bbf4fcdbaeff09f43/Undetermined_S0_L002_R2_001.fastq.gz Undetermined\ from\ 241203_NS500730_0813_AHFCCMBGYW_L003_ds.42d1081ec1804589803ed3032b79756b/Undetermined_S0_L003_R2_001.fastq.gz Undetermined\ from\ 241203_NS500730_0813_AHFCCMBGYW_L004_ds.c04e921144a84eb1b1154dbabfdb7d03/Undetermined_S0_L004_R2_001.fastq.gz > combined-R2.fastq.gz 
+
+neat! should be able to demulti like so:
+
+srun -p bigmemm -t 12:00:00 --mem=64G --nodes=1 --cpus-per-task=4 ~/fastq-multx/fastq-multx -H -m0 -B barcodes.tsv combined-R1.fastq.gz combined-R2.fastq.gz  -o %-R1.fastq.gz %-R2.fastq.gz
+
+This seg faults the same way twice at the same place. 
+
+Will great read counts from aavs1 forward and see what the deal is.
+(base) maccamp@farm:~/temp-basespace$ gunzip -c combined-R1.fastq.gz | grep GGACTTGG+CGTCTGCG > AAVS1_a.headers
+
+ wc -l AAVS1_a.headers 
+ 29645262 AAVS1_a.headers
+ 
+ (base) maccamp@farm:~/temp-basespace$ gunzip -c AAVS1_a-R1.fastq.gz | grep GGACTTGG+CGACTGCG > aavs1-fastq.headers
+ wc -l aavs1-fastq.headers 
+34468 aavs1-fastq.headers
+
+Yikes!!!
+
+srun -p bigmemm -t 12:00:00 --mem=240GB --nodes=1 --cpus-per-task=1 ~/fastq-multx/fastq-multx -H -m0 -B barcodes.tsv combined-R1.fastq.gz combined-R2.fastq.gz  -o %-R1.fastq.gz %-R2.fastq.gz
+
+This looks to have gone halfway through. Will allocate more mem
+
+srun -p bigmemm -t 14:00:00 --mem=720GB --nodes=1 --cpus-per-task=2 ~/fastq-multx/fastq-multx -H -m0 -B barcodes.tsv combined-R1.fastq.gz combined-R2.fastq.gz  -o %-R1.fastq.gz %-R2.fastq.gz
+base) maccamp@farm:~/temp-basespace$ srun -p bigmemm -t 14:00:00 --mem=720GB --nodes=1 --cpus-per-task=2 ~/fastq-multx/fastq-multx -H -m0 -B barcodes.tsv combined-R1.fastq.gz combined-R2.fastq.gz  -o %-R1.fastq.gz %-R2.fastq.gz
+srun: job 18793954 queued and waiting for resources
+srun: job 18793954 has been allocated resources
+Using Barcode File: barcodes.tsv
+Id      Count   File(s)
+id      0       id-R1.fastq.gz  id-R2.fastq.gz
+Unedit_a        28839978        Unedit_a-R1.fastq.gz    Unedit_a-R2.fastq.gz
+Unedit_b        27709532        Unedit_b-R1.fastq.gz    Unedit_b-R2.fastq.gz
+AAVS1_a 30906890        AAVS1_a-R1.fastq.gz     AAVS1_a-R2.fastq.gz
+AAVS1_b 32169478        AAVS1_b-R1.fastq.gz     AAVS1_b-R2.fastq.gz
+Dep1_a  31054555        Dep1_a-R1.fastq.gz      Dep1_a-R2.fastq.gz
+Dep1_b  28926393        Dep1_b-R1.fastq.gz      Dep1_b-R2.fastq.gz
+Dep2_a  28768717        Dep2_a-R1.fastq.gz      Dep2_a-R2.fastq.gz
+Dep2_b  32249997        Dep2_b-R1.fastq.gz      Dep2_b-R2.fastq.gz
+Dep3_a  32012915        Dep3_a-R1.fastq.gz      Dep3_a-R2.fastq.gz
+Dep3_b  29321041        Dep3_b-R1.fastq.gz      Dep3_b-R2.fastq.gz
+Ap102_a 30898661        Ap102_a-R1.fastq.gz     Ap102_a-R2.fastq.gz
+Ap102_b 37761086        Ap102_b-R1.fastq.gz     Ap102_b-R2.fastq.gz
+Dep55_a 31721650        Dep55_a-R1.fastq.gz     Dep55_a-R2.fastq.gz
+Dep55_b 34433308        Dep55_b-R1.fastq.gz     Dep55_b-R2.fastq.gz
+unmatched       93407501        unmatched-R1.fastq.gz   unmatched-R2.fastq.gz
+total   530181702
+
+(base) maccamp@farm:~/temp-basespace$ gunzip -c AAVS1_a-R1.fastq.gz  | grep GGACTTGG+CGTCTGCG > AAVS1_a-R1.headers
+(base) maccamp@farm:~/temp-basespace$ wc -l AAVS1_a-R1.headers 
+29645262 AAVS1_a-R1.headers
+
+Neat! seems to have worked ok
+(base) maccamp@farm:~/temp-basespace$ gunzip -c AAVS1_a-R1.fastq.gz  | grep "^@" | grep -v "GGACTTGG"
+(base) maccamp@farm:~/temp-basespace$ 
+
+err, so, what's with the counts?

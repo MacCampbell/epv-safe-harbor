@@ -1,0 +1,74 @@
+---
+title: "302-additional-rna"
+output: html_document
+date: "2024-12-13"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
+```
+
+```{r}
+library(tidyverse)
+library(DESeq2)
+```
+
+Have some new RNAseq data. It is in ~/temp-basespace/
+
+symlinking in data/rna 
+
+14 samples (see demulti-notes for details)
+
+ensembl genome in ~/genomes/hg38
+
+wget https://ftp.ensembl.org/pub/release-112/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna_sm.primary_assembly.fa.gz
+
+wget https://ftp.ensembl.org/pub/release-112/gtf/homo_sapiens/Homo_sapiens.GRCh38.112.chr.gtf.gz
+
+
+executing in ~/genomes/hg38 on unzipped files like so like so:
+
+module load start\
+Loading star/2.7.6a
+
+Should only take about 1.5 hours
+```{sh, eval=FALSE}
+module load star
+srun -p bigmemm -t 4:00:00 --mem=256G --nodes=1 --ntasks-per-node=1 \
+--cpus-per-task=12 STAR --runThreadN 12 \
+--runMode genomeGenerate \
+--genomeDir star_index \
+--genomeFastaFiles Homo_sapiens.GRCh38.dna_sm.primary_assembly.fa \
+--sjdbGTFfile Homo_sapiens.GRCh38.112.chr.gtf 
+
+```
+
+
+Command to test looks like this.
+
+```{sh, eval=FALSE}
+srun -p high -t 18:00:00 --mem=32G --nodes=1 --ntasks-per-node=1 \
+--cpus-per-task=4 STAR \
+      --runThreadN 4 \
+      --genomeDir /home/maccamp/genome/hg38/star_index \
+      --outSAMtype BAM SortedByCoordinate \
+      --readFilesCommand zcat \
+      --readFilesIn data/rna/AAVS1_a-R1.fastq.gz  data/rna/AAVS1_a-R2.fastq.gz  \
+      --quantMode GeneCounts \
+      --outFileNamePrefix outputs/302/AAVS1_a \
+      > outputs/302/AAVS1_a-STAR.stdout 2> outputs/302/AAVS1_a-STAR.stderr
+
+```
+
+Pull in meta
+
+```{r}
+meta<-read_csv("meta/new-rna.csv")
+meta
+```
+
+```{r}
+meta %>% mutate(Command=paste0("srun -p high -t 18:00:00 --mem=32G --nodes=1 --ntasks-per-node=1 --cpus-per-task=4 STAR --runThreadN 4 --genomeDir /home/maccamp/genome/hg38/star_index --outSAMtype BAM SortedByCoordinate --readFilesCommand zcat --readFilesIn data/rna/",File1,"  data/rna/",File2,"  --quantMode GeneCounts --outFileNamePrefix outputs/302/",Sample, " > outputs/302/",Sample,"-STAR.stdout 2> outputs/302/",Sample,"STAR.stderr &")) %>%
+  select(Command) %>% write_tsv("302-star-commands.txt")
+
+```

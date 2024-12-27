@@ -67,8 +67,15 @@ meta<-read_csv("meta/new-rna.csv")
 meta
 ```
 
+module load star!
 ```{r}
-meta %>% mutate(Command=paste0("srun -p high -t 18:00:00 --mem=32G --nodes=1 --ntasks-per-node=1 --cpus-per-task=4 STAR --runThreadN 4 --genomeDir /home/maccamp/genome/hg38/star_index --outSAMtype BAM SortedByCoordinate --readFilesCommand zcat --readFilesIn data/rna/",File1,"  data/rna/",File2,"  --quantMode GeneCounts --outFileNamePrefix outputs/302/",Sample, " > outputs/302/",Sample,"-STAR.stdout 2> outputs/302/",Sample,"STAR.stderr &")) %>%
+meta %>% mutate(Command=paste0("srun -p med -t 6-12:00:00 --mem=32G --nodes=1 --ntasks-per-node=1 --cpus-per-task=4 STAR --runThreadN 4 --genomeDir /home/maccamp/genomes/hg38/star_index --outSAMtype BAM SortedByCoordinate --readFilesCommand zcat --readFilesIn data/rna/",File1,"  data/rna/",File2,"  --quantMode GeneCounts --outFileNamePrefix outputs/302/",Sample, " > outputs/302/",Sample,"-STAR.stdout 2> outputs/302/",Sample,"STAR.stderr &")) %>%
   select(Command) %>% write_tsv("302-star-commands.txt")
 
 ```
+
+Initiall Dep55 a & b aligned, about 75% rate, increasing run time to 6-12
+
+
+Run times are good
+

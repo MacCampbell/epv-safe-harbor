@@ -10,7 +10,12 @@ knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
 
 ```{r}
 library(tidyverse)
+library(ggrepel)
 library(DESeq2)
+library(pheatmap)
+library(viridis)
+library(RColorBrewer)
+library(textshape)
 ```
 
 Have some new RNAseq data. It is in ~/temp-basespace/
@@ -79,3 +84,316 @@ Initiall Dep55 a & b aligned, about 75% rate, increasing run time to 6-12
 
 Run times are good
 
+Need to combine *.tab files
+
+base) Macs-MacBook-Pro-2:302 mac$ head Dep2_aReadsPerGene.out.tab
+N_unmapped	8039997	8039997	8039997
+N_multimapping	3351940	3351940	3351940
+N_noFeature	5657660	15948467	6021406
+N_ambiguous	1869987	47749	819169
+
+# combine using the fourth column skipping the first five rows
+(base) Macs-MacBook-Pro-2:302 mac$ ls | grep out.tab | perl -pe 's/ReadsPerGene.out.tab//g' > samples.txt
+
+```{sh, eval=FALSE}
+#get counts
+for sample in `cat samples.txt`; do \
+    echo ${sample}; \
+    cat ${sample}ReadsPerGene.out.tab | tail -n +5 | cut -f 4 > ${sample}.count; \
+done;
+
+#get gene names
+tail -n +5 AAVS1_aReadsPerGene.out.tab | cut -f 1 > genes.txt
+
+#combine
+paste genes.txt *.count > temp.txt
+cat <(cat samples.txt | sort | paste -s -) temp.txt > additional-counts.txt
+```
+
+AAVS1_a	AAVS1_b	Ap102_a	Ap102_b	Dep1_a	Dep1_b	Dep2_a	Dep2_b	Dep3_a	Dep3_b	Dep55_a	Dep55_b	Unedit_a	Unedit_b
+ENSG00000228037	0	0	0	0	1	0	0	0	0	0	3	0	0	0
+ENSG00000142611	1	0	2	0	1	1	2	0	0	0	17	1	5	2
+ENSG00000284616	0	0	0	0	0	0	0	0	0	0	5	0	0	0
+ENSG00000157911	148	220	204	192	231	181	225	166	159	195	157	85	131	146
+ENSG00000260972	0	0	0	0	0	0	0	0	0	0	4	2	0	0
+ENSG00000224340	0	0	0	0	0	0	0	0	0	0	2	0	0	0
+ENSG00000226374	1	1	0	0	0	1	0	0	1	0	4	0	0	0
+ENSG00000229280	0	0	0	0	0	0	0	0	1	1	0	0	0	1
+ENSG00000142655	484	524	437	362	426	364	395	483	364	415	411	200	427	415
+
+
+# DE analysis
+
+have meta
+
+get data
+
+```{r}
+dat<-read_tsv("data/additional-counts.txt")
+locus<-c("AAVS1","Dep.1","Dep.2","Dep.3","Dep.55","Ap.102")
+namesdf<-read_tsv("data/hgnc-ensembl.txt") %>% select(ID, Gene.name) 
+
+```
+
+```{r}
+ramper<-colorRampPalette(c("white", "darkred"))
+ramp<-ramper(8)
+```
+
+
+```{r}
+Tester<-function(locus, meta, dat) {
+  
+#testing
+#locus<-"AAVS1"
+
+# functions
+coldata<-meta %>% filter(Locus==locus) %>% select(Sample, Category, Locus)
+coldata2<-meta %>% filter(Category=="Control") %>% select(Sample, Category, Locus)
+
+m<-bind_rows(coldata,coldata2)
+m$Category <- factor(m$Category, levels=c("Control","Edited"))
+
+m<-as.data.frame(m)
+rownames(m)<-m$Sample
+m<-m %>% select(-Sample)
+
+
+d<-select(dat, ID, rownames(m)) 
+d<-as.data.frame(d)
+rownames(d)<-d$ID
+d<-d %>% select(-ID)
+
+dds <- DESeqDataSetFromMatrix(countData = d,
+                              colData = m,
+                              design = ~Category )
+
+#Drop low counts
+keep <- rowSums(counts(dds)) >= 10
+dds <- dds[keep,]
+
+#Create other data
+vsd <- vst(dds, blind=FALSE)
+ntd <- normTransform(dds)
+
+
+ntddata<-assay(ntd)
+vsddata<-assay(vsd)
+
+#PCA for fun 
+pcaData <- plotPCA(vsd, intgroup=c("Category"), returnData=TRUE)
+percentVar <- round(100 * attr(pcaData, "percentVar"))
+
+ggplot(pcaData, aes(PC1, PC2, fill=Category, shape=Category)) +
+  geom_point(size=3) +
+  xlab(paste0("PC1: ",percentVar[1],"% variance")) +
+  ylab(paste0("PC2: ",percentVar[2],"% variance")) + 
+  coord_fixed() +
+  theme_bw() +
+  theme(panel.grid=element_blank()) +
+  scale_fill_viridis_d(option="magma") +
+  scale_shape_manual(values=c(21,22,23)) +
+  guides(fill = guide_legend(override.aes=list(shape=c(22)))) +
+  ggtitle(paste0(locus, "\n")) +
+  theme(plot.title = element_text(hjust=0.5, size=16, face="bold")) 
+
+ggsave(paste0("outputs/302/",locus,"-pca.pdf"))
+
+#DE testing
+
+dds <- DESeq(dds)
+res <- results(dds)
+
+resOrdered <- res[order(res$pvalue),]
+summary(res)
+
+results<-as_tibble(resOrdered)
+results$Gene<-rownames(resOrdered)
+results<-results %>% relocate(Gene) %>% filter(padj<0.05, abs(log2FoldChange) >= 1) %>% mutate(Locus=paste0(locus))
+
+write_csv(results, paste0("outputs/302/",locus,"-results.csv"))
+color<-ifelse(locus=="AAVS1", "grey",
+       ifelse(locus %in% c("Dep.3","Ap.102"), "red","blue"))
+
+toppers<-results %>% top_n(10, -padj) %>% left_join(namesdf, by=c("Gene"="ID"))
+
+ggplot() +
+  geom_point(data=results %>% filter(padj < 0.01), aes(x=log2FoldChange, y=-log10(padj)),
+             color=color, alpha=0.9) +
+  geom_point(data=results %>% filter(padj >= 0.01), aes(x=log2FoldChange, y=-log10(padj)),
+             color="black", alpha=0.9) +
+  geom_text_repel(data=toppers, aes(x=log2FoldChange, y=-log10(padj), label=Gene.name))+
+  xlab("log2 (Fold Change)") +
+  theme_bw() +
+  theme(panel.grid = element_blank()) +
+  ggtitle(paste0(locus, "\n")) +
+  theme(plot.title = element_text(hjust=0.5, size=16, face="bold")) +
+  theme(axis.title = element_text(face="bold")) +
+  xlim(-12,12) +
+  ylim(0,70)
+
+ggsave(paste0("outputs/302/",locus,"-volcano.jpeg"), width=5, height=4)
+ggsave(paste0("outputs/302/",locus,"-volcano.pdf"), width=5, height=4)
+
+# Heatmap of all DE genes
+# need normalized counts
+ntd <- normTransform(dds)
+assay<-assay(ntd)
+norm<-counts(dds,normalized=TRUE)
+res<-norm[rownames(norm) %in% results$Gene,]
+
+ddf <- as.data.frame(colData(dds)[,c("Category")])
+
+pdf(paste0("outputs/302/",locus,"-heatmap.pdf"), width=8, height=10)
+
+anno<-ifelse(locus=="AAVS1", "grey",
+       ifelse(locus %in% c("Dep.3","Ap.102"), "red","blue"))
+
+annotate = list(
+  Category = c(Control="grey50", Edited=paste0(anno)))
+
+pheatmap(assay[rownames(assay) %in% rownames(res),], cluster_rows=TRUE, show_rownames=FALSE,
+         cluster_cols=TRUE)
+         # annotation_col=ddf,
+         #color=ramp, annotation_colors = annotate)
+
+dev.off()
+
+
+}
+```
+
+
+Cutting out this code
+```{r, eval=FALSE}
+## get genes for insertion sites or for flanking genes
+  if (locus=="AAVS1") {
+  gen<-c("ENSG00000125503")
+} else if (locus=="Dep.2") {
+  gen<-c("ENSG00000164627")
+} else if (locus=="Dep.55") {
+  gen<-c("ENSG00000124243")
+} else if (locus=="Prot.218") {
+  gen<-c("ENSG00000136960")
+} else if (locus=="Dep.3") {
+  gen<-c("ENSG00000136243","ENSG00000136235")
+} else if (locus=="Ap.102") {
+  gen<-c("ENSG00000249859","ENSG00000229140")
+}
+
+rename<-assay %>% as_tibble() 
+rename$ID<-rownames(assay) 
+rename<- rename %>% filter(ID %in% c(toppers$Gene, gen))
+rename<-rename %>% left_join(namesdf)
+
+r2<-rename %>% filter(ID %in% c(gen)) # this so I can order the matrix later
+
+# needs to be a matrix and reordered control, edited
+#locus<-c("AAVS1","Dep.2","Dep.55","Prot.218","Dep.3","Ap.102")
+
+  if (locus=="AAVS1") {
+  order<-c("Control.1","KIF6.1","AAVS1.1","AAVS1.2")
+} else if (locus=="Dep.2") {
+  order<-c("Control.1","KIF6.1","Control.2","KIF6.2")
+} else if (locus=="Dep.55") {
+  order<-c("Control1","Control2","BCAS1","BCAS2")
+} else if (locus=="Prot.218") {
+  order<-c("Control1","Control2","ENPP1","ENPP2")
+} else if (locus=="Dep.3") {
+  order<-c("Control-1","Control-2","NUP1","NUP2")
+} else if (locus=="Ap.102") {
+  order<-c("Control-1","Control-2","PVT1","PVT2")
+}
+
+matrix<-rename %>% select(-ID, -Gene.name)  %>% relocate(all_of(order)) %>% as.matrix()
+rownames(matrix) <- rename$Gene.name
+
+#Reorder matrix, append flanking/edited genes
+
+matrix<-matrix[order(rowSums(matrix[,3:4]),decreasing=T),]
+
+m1<-subset(matrix, !(rownames(matrix) %in% r2$Gene.name))
+m2<-subset(matrix, rownames(matrix) %in% r2$Gene.name)
+matrix<-rbind(m1,m2)
+
+pdf(paste0("outputs/302/",locus,"-heatmap-sub.pdf"), width=2.5, height=6)
+
+pheatmap(matrix, 
+         cluster_rows=FALSE, show_rownames=TRUE,border_color = NA,
+         cluster_cols=FALSE, show_colnames=FALSE, annotation_col=ddf,
+         color=ramp, annotation_colors = annotate, legend=FALSE,
+         main = paste0(locus,"\n"), 
+         annotation_legend=FALSE)
+
+dev.off()
+
+
+}
+```
+
+```{r}
+lapply(locus, Tester, meta, dat)
+```
+
+
+
+## Summarize 
+
+```{r}
+resfiles<-list.files(path="outputs/302/", pattern="*results.csv", full.names = TRUE)
+
+resf<-lapply(resfiles,read_csv) %>% bind_rows()
+```
+
+```{r}
+sum<-resf %>% mutate(Direction=ifelse(log2FoldChange < 0, "Negative", "Positive")) %>% group_by(Locus, Direction) %>%
+                  summarize(Count=n())
+sum<-sum %>% mutate(Number=ifelse(Direction=="Positive",Count,-1*Count))
+sum
+```
+
+Make barplot of this.
+Add consistently DE genes to the plot, in a stacked fashion
+
+```{r}
+universal<-resf %>% mutate(Direction=ifelse(log2FoldChange < 0, "Negative", "Positive")) %>% group_by(Gene) %>% mutate(Occurrence=n()) %>% filter(Occurrence == 6) %>% select(Gene, Direction, Occurrence) %>% unique()
+
+unis<-universal %>% group_by(Direction) %>% summarize(Consistent=n()) %>%
+  mutate(Consistent=ifelse(Direction=="Positive",Consistent, -1*Consistent))
+write_csv(universal, file="outputs/302/genes-found-across-comparisions.csv")
+```
+
+
+```{r}
+sum2<-sum %>% left_join(unis) 
+sum2<-sum2 %>% left_join(meta)
+sum2$Locus<-factor(sum2$Locus, levels=c("AAVS1","Ap.102","Dep.3","Dep.1","Dep.2","Dep.55"))
+sum2<-mutate(sum2,Fill=ifelse(Locus=="AAVS1", "grey",
+       ifelse(Locus %in% c("Dep.3","Ap.102"), "red","blue")))
+```
+
+```{r}
+ggplot(sum2) +
+  geom_bar(aes(x=Locus,y=Number), fill=sum2$Fill, stat='identity', alpha=0.6, 
+           width=0.8) +
+  geom_bar(aes(x=Locus,y=Consistent), fill=sum2$Fill, stat='identity', alpha=0.8, 
+           width=0.8) +
+  scale_fill_viridis_d(option="H") +
+  theme_bw() +
+  theme(panel.grid = element_blank()) +
+  ylab("Number DE Genes\n") +
+  xlab("\nLocus") +
+  theme(axis.title = element_text(face = "bold"))+
+  theme(legend.position = "none") +
+  ylim(-1500,1500) 
+ggsave("outputs/302/new-rna-de-genes.jpeg", width=5, height=5)
+ggsave("outputs/302/new-rna-de-genes.pdf", width=5, height=5)
+
+```
+
+
+get details
+
+```{r}
+sum2 %>% select(Locus, Direction, Number) %>% unique() %>% write_csv("outputs/302/new-rna-DE-gene-summary.csv")
+```

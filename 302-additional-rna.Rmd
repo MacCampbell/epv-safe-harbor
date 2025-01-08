@@ -336,7 +336,16 @@ Dep.2 sub heatmap does not display the proper gene
 Is intronic KIF6
 (base) Macs-MacBook-Pro-2:302 mac$ grep ENSG00000164627 ../../data/hgnc-ensembl.txt 
 HGNC:21202	KIF6	kinesin family member 6	ENSG00000164627
+(base) Macs-MacBook-Pro-2:302 mac$ grep ENSG00000164627 Dep2_aReadsPerGene.out.tab 
+ENSG00000164627	1	1	0
+(base) Macs-MacBook-Pro-2:302 mac$ grep ENSG00000164627 Dep2_bReadsPerGene.out.tab 
+ENSG00000164627	4	0	4
+(base) Macs-MacBook-Pro-2:302 mac$ grep ENSG00000164627 Unedit_aReadsPerGene.out.tab 
+ENSG00000164627	0	0	0
+(base) Macs-MacBook-Pro-2:302 mac$ grep ENSG00000164627 Unedit_bReadsPerGene.out.tab 
+ENSG00000164627	2	2	0
 
+Filtered out as a low read count gene
 ```{r}
 lapply(locus, Tester, meta, dat)
 ```

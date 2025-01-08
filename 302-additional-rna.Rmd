@@ -145,7 +145,7 @@ ramp<-ramper(8)
 Tester<-function(locus, meta, dat) {
   
 #testing
-#locus<-"AAVS1"
+#locus<-"Dep.3"
 
 # functions
 coldata<-meta %>% filter(Locus==locus) %>% select(Sample, Category, Locus)
@@ -215,14 +215,15 @@ write_csv(results, paste0("outputs/302/",locus,"-results.csv"))
 color<-ifelse(locus=="AAVS1", "grey",
        ifelse(locus %in% c("Dep.3","Ap.102"), "red","blue"))
 
-toppers<-results %>% top_n(10, -padj) %>% left_join(namesdf, by=c("Gene"="ID"))
+toppers<-results %>% top_n(20, -padj) %>% left_join(namesdf, by=c("Gene"="ID"))
+toppers10<-results %>% top_n(10, -padj) %>% left_join(namesdf, by=c("Gene"="ID"))
 
 ggplot() +
   geom_point(data=results %>% filter(padj < 0.01), aes(x=log2FoldChange, y=-log10(padj)),
              color=color, alpha=0.9) +
   geom_point(data=results %>% filter(padj >= 0.01), aes(x=log2FoldChange, y=-log10(padj)),
              color="black", alpha=0.9) +
-  geom_text_repel(data=toppers, aes(x=log2FoldChange, y=-log10(padj), label=Gene.name))+
+  geom_text_repel(data=toppers10, aes(x=log2FoldChange, y=-log10(padj), label=Gene.name))+
   xlab("log2 (Fold Change)") +
   theme_bw() +
   theme(panel.grid = element_blank()) +
@@ -242,7 +243,9 @@ assay<-assay(ntd)
 norm<-counts(dds,normalized=TRUE)
 res<-norm[rownames(norm) %in% results$Gene,]
 
-ddf <- as.data.frame(colData(dds)[,c("Category")])
+ddf <- as.data.frame(colData(dds)[,c("Category")]) 
+colnames(ddf)<-c("Category")
+ddf$Sample<-rownames(colData(dds))
 
 pdf(paste0("outputs/302/",locus,"-heatmap.pdf"), width=8, height=10)
 
@@ -260,15 +263,13 @@ pheatmap(assay[rownames(assay) %in% rownames(res),], cluster_rows=TRUE, show_row
 dev.off()
 
 
-}
-```
 
 
-Cutting out this code
-```{r, eval=FALSE}
 ## get genes for insertion sites or for flanking genes
-  if (locus=="AAVS1") {
+if (locus=="AAVS1") {
   gen<-c("ENSG00000125503")
+} else if (locus=="Dep.1") {
+  gen<-c("ENSG00000196092")
 } else if (locus=="Dep.2") {
   gen<-c("ENSG00000164627")
 } else if (locus=="Dep.55") {
@@ -289,20 +290,19 @@ rename<-rename %>% left_join(namesdf)
 r2<-rename %>% filter(ID %in% c(gen)) # this so I can order the matrix later
 
 # needs to be a matrix and reordered control, edited
-#locus<-c("AAVS1","Dep.2","Dep.55","Prot.218","Dep.3","Ap.102")
 
-  if (locus=="AAVS1") {
-  order<-c("Control.1","KIF6.1","AAVS1.1","AAVS1.2")
+if (locus=="AAVS1") {
+  order<-c("Unedit_a","Unedit_b","AAVS1_a","AAVS1_b")
+} else if (locus=="Dep.1") {
+  order<-c("Unedit_a","Unedit_b","Dep1_a","Dep1_b")
 } else if (locus=="Dep.2") {
-  order<-c("Control.1","KIF6.1","Control.2","KIF6.2")
-} else if (locus=="Dep.55") {
-  order<-c("Control1","Control2","BCAS1","BCAS2")
-} else if (locus=="Prot.218") {
-  order<-c("Control1","Control2","ENPP1","ENPP2")
+  order<-c("Unedit_a","Unedit_b","Dep2_a","Dep2_b")
 } else if (locus=="Dep.3") {
-  order<-c("Control-1","Control-2","NUP1","NUP2")
+  order<-c("Unedit_a","Unedit_b","Dep3_a","Dep3_b")
 } else if (locus=="Ap.102") {
-  order<-c("Control-1","Control-2","PVT1","PVT2")
+  order<-c("Unedit_a","Unedit_b","Ap102_a","Ap102_b")
+} else if (locus=="Dep.55") {
+  order<-c("Unedit_a","Unedit_b","Dep55_a","Dep55_b")
 }
 
 matrix<-rename %>% select(-ID, -Gene.name)  %>% relocate(all_of(order)) %>% as.matrix()
@@ -320,16 +320,22 @@ pdf(paste0("outputs/302/",locus,"-heatmap-sub.pdf"), width=2.5, height=6)
 
 pheatmap(matrix, 
          cluster_rows=FALSE, show_rownames=TRUE,border_color = NA,
-         cluster_cols=FALSE, show_colnames=FALSE, annotation_col=ddf,
-         color=ramp, annotation_colors = annotate, legend=FALSE,
-         main = paste0(locus,"\n"), 
-         annotation_legend=FALSE)
+         cluster_cols=FALSE, show_colnames=FALSE,legend=FALSE,
+         annotation_col = ddf %>% select(Category),
+         main = paste0(locus,"\n"), color=ramp,
+         annotation_legend=FALSE, annotation_colors = annotate)
+
 
 dev.off()
 
-
 }
 ```
+
+
+Dep.2 sub heatmap does not display the proper gene
+Is intronic KIF6
+(base) Macs-MacBook-Pro-2:302 mac$ grep ENSG00000164627 ../../data/hgnc-ensembl.txt 
+HGNC:21202	KIF6	kinesin family member 6	ENSG00000164627
 
 ```{r}
 lapply(locus, Tester, meta, dat)
